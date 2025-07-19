@@ -9,3 +9,6 @@ dist
 # Prisma
 /prisma/dev.db
 /generated
+
+# Temp 
+generarEstructuraNextGen.js
