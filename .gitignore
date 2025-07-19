@@ -1,0 +1,11 @@
+# Node.js
+node_modules
+.env
+*.log
+build
+dist
+.vscode
+
+# Prisma
+/prisma/dev.db
+/generated
