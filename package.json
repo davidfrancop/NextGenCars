@@ -1,0 +1,9 @@
+{
+  "name": "nextgencars",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node dev-all.mjs",
+    "stop": "node stop-all.mjs"
+  }
+}
