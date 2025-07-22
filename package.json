@@ -2,14 +2,11 @@
   "name": "nextgencars",
   "version": "1.0.0",
   "private": true,
-  "workspaces": [
-    "web",
-    "control",
-    "backend-graphql"
-  ],
   "scripts": {
-    "dev": "npm --workspace backend-graphql run dev",
-    "dev:backend": "tsx src/index.ts"
+    "dev": "concurrently -n backend,control,web -c green,cyan,magenta \"pnpm --filter backend-graphql dev\" \"pnpm --filter control dev\" \"pnpm --filter web dev\"",
+    "dev:backend": "pnpm --filter backend-graphql dev",
+    "dev:control": "pnpm --filter control dev",
+    "dev:web": "pnpm --filter web dev"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
@@ -25,3 +22,4 @@
     "valibot": "^1.1.0"
   }
 }
+

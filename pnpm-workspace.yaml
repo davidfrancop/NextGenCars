@@ -1,0 +1,10 @@
+packages:
+  - 'backend-graphql'
+  - 'control'
+  - 'web'
+
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - esbuild
+  - prisma
