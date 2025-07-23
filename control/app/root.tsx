@@ -8,7 +8,9 @@ import {
   ScrollRestoration,
 } from "@remix-run/react";
 import type { LinksFunction } from "@remix-run/node";
-
+import React from "react";
+import { Sidebar } from "./components/Sidebar";
+import { Header } from "./components/Header";
 import "./tailwind.css";
 
 export const links: LinksFunction = () => [
@@ -20,11 +22,13 @@ export const links: LinksFunction = () => [
   },
   {
     rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
+    href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap",
   },
 ];
 
-export function Layout({ children }: { children: React.ReactNode }) {
+export default function App() {
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+
   return (
     <html lang="en">
       <head>
@@ -33,15 +37,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body>
-        {children}
+      <body className="bg-gray-50 font-inter">
+        <Sidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="md:ml-64 min-h-screen flex flex-col">
+          <Header onOpenSidebar={() => setSidebarOpen(true)} />
+          <main className="flex-1 p-4">
+            <Outlet />
+          </main>
+        </div>
         <ScrollRestoration />
         <Scripts />
       </body>
     </html>
   );
-}
-
-export default function App() {
-  return <Outlet />;
 }
