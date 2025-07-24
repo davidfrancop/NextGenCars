@@ -1,0 +1,94 @@
+# .github/workflows/ci.yml
+name: CI/CD NextGenCars (Node.js 20 + pnpm Monorepo)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  setup:
+    name: Setup & Install Dependencies
+    runs-on: ubuntu-latest
+    outputs:
+      cache-hit: ${{ steps.cache-pnpm.outputs.cache-hit }}
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js 20 + pnpm
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+          package-manager: 'pnpm'
+
+      - name: Cache pnpm store
+        id: cache-pnpm
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install all workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+  build-and-test:
+    name: Lint, Type-Check, Test & Build All Workspaces
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
+      - name: Restore pnpm store cache (if missed)
+        if: needs.setup.outputs.cache-hit != 'true'
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Run linter on all packages
+        run: pnpm -r lint
+
+      - name: Run type-check (if script exists)
+        run: pnpm -r --if-present typecheck
+
+      - name: Run tests across workspaces
+        run: pnpm -r test
+
+      - name: Build all packages
+        run: pnpm -r build
+
+  deploy-web:
+    name: Deploy Web Package to Vercel
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js 20 + pnpm
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          package-manager: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Deploy web workspace to Vercel
+        run: pnpm dlx vercel --filter=web --prod --confirm
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
