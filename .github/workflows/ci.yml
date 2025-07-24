@@ -20,13 +20,13 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v3
 
-      - name: Set up Node.js 20 + pnpm
+      - name: Set up Node.js 20
         uses: actions/setup-node@v3
         with:
           node-version: 20
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
-          package-manager: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
 
       - name: Cache pnpm store
         id: cache-pnpm
@@ -37,7 +37,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
-      - name: Install all workspace dependencies
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
   build-and-test:
@@ -47,6 +47,14 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v3
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        run: npm install -g pnpm
 
       - name: Restore pnpm store cache (if missed)
         if: needs.setup.outputs.cache-hit != 'true'
@@ -68,7 +76,7 @@ jobs:
         run: pnpm -r build
 
   deploy-web:
-    name: Deploy Web Package to Vercel
+    name: Deploy Web Workspace to Vercel
     needs: build-and-test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -76,12 +84,13 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v3
 
-      - name: Set up Node.js 20 + pnpm
+      - name: Set up Node.js 20
         uses: actions/setup-node@v3
         with:
           node-version: 20
-          cache: 'pnpm'
-          package-manager: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
