@@ -22,10 +22,11 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "./",\
         "packageDependencies": [\
           ["@prisma/client", "virtual:6.12.0(prisma@6.12.0(typescript@5.8.3))(typescript@5.8.3)#6.12.0"],\
+          ["@prisma/debug", "6.12.0"],\
           ["@remix-run/node", "virtual:2.16.8(typescript@5.8.3)#2.16.8"],\
-          ["@types/jwt-decode", "3.1.0"],\
           ["@types/node", "24.1.0"],\
           ["concurrently", "8.2.2"],\
+          ["esbuild", "0.25.8"],\
           ["graphql", "16.11.0"],\
           ["graphql-yoga", "virtual:5.15.1(graphql@16.11.0)#5.15.1"],\
           ["jsonwebtoken", "9.0.2"],\
@@ -1667,15 +1668,6 @@ const RAW_RUNTIME_STATE =
         "packageDependencies": [\
           ["@types/hast", "2.3.10"],\
           ["@types/unist", "2.0.11"]\
-        ]\
-      }]\
-    ]],\
-    ["@types/jwt-decode", [\
-      ["3.1.0", {\
-        "packageLocation": "./node_modules/.pnpm/@types+jwt-decode@3.1.0/node_modules/@types/jwt-decode",\
-        "packageDependencies": [\
-          ["@types/jwt-decode", "3.1.0"],\
-          ["jwt-decode", "4.0.0"]\
         ]\
       }]\
     ]],\
