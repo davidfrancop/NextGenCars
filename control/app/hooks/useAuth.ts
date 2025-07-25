@@ -32,7 +32,7 @@ export function useAuth({ redirectTo = "/login" } = {}) {
         setIsAuthenticated(true);
         setRole(decoded.role);
       }
-    } catch (err) {
+    } catch {
       localStorage.removeItem("token");
       navigate(redirectTo);
     }

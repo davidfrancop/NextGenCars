@@ -20,6 +20,9 @@ importers:
       jsonwebtoken:
         specifier: ^9.0.2
         version: 9.0.2
+      jwt-decode:
+        specifier: ^4.0.0
+        version: 4.0.0
       prisma:
         specifier: ^6.12.0
         version: 6.12.0(typescript@5.8.3)
@@ -27,6 +30,15 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0(typescript@5.8.3)
     devDependencies:
+      '@remix-run/node':
+        specifier: ^2.16.8
+        version: 2.16.8(typescript@5.8.3)
+      '@types/jwt-decode':
+        specifier: ^3.1.0
+        version: 3.1.0
+      '@types/node':
+        specifier: ^24.1.0
+        version: 24.1.0
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
@@ -36,6 +48,9 @@ importers:
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
+      vite:
+        specifier: ^6.3.5
+        version: 6.3.5(@types/node@24.1.0)(jiti@2.4.2)(tsx@4.20.3)(yaml@2.8.0)
 
   backend-graphql: {}
 
@@ -1014,6 +1029,10 @@ packages:
   '@types/hast@2.3.10':
     resolution: {integrity: sha512-McWspRw8xx8J9HurkVBfYj0xKoE25tOFlHGdx4MJ5xORQrMGZNqJhVQWaIbm6Oyla5kYOXtDiopzKRJzEOkwJw==}
 
+  '@types/jwt-decode@3.1.0':
+    resolution: {integrity: sha512-tthwik7TKkou3mVnBnvVuHnHElbjtdbM63pdBCbZTirCt3WAdM73Y79mOri7+ljsS99ZVwUFZHLMxJuJnv/z1w==}
+    deprecated: This is a stub types definition. jwt-decode provides its own type definitions, so you do not need this installed.
+
   '@types/mdast@3.0.15':
     resolution: {integrity: sha512-LnwD+mUEfxWMa1QpDraczIn6k0Ee3SMicuYSSzS6ZYl2gKS09EClnJYGd8Du6rfc5r/GZEk5o1mRb8TaTj03sQ==}
 
@@ -1936,6 +1955,10 @@ packages:
 
   jws@3.2.2:
     resolution: {integrity: sha512-YHlZCB6lMTllWDtSPHz/ZXTsi8S00usEV6v1tjq8tOUZzw7DpSDWVXjXDre6ed1w/pd495ODpHZYSdkRTsa0HA==}
+
+  jwt-decode@4.0.0:
+    resolution: {integrity: sha512-+KJGIyHgkGuIq3IEBNftfhW/LfWhXUIY6OmyVWjliu5KH1y0fw7VQ8YndE2O4qZdMSd9SqbnC8GOcZEy0Om7sA==}
+    engines: {node: '>=18'}
 
   kleur@4.1.5:
     resolution: {integrity: sha512-o+NO+8WrRiQEE4/7nwRJhN1HWpVmJm511pBHUxPLtp0BUISzlBplORYSmTclCnJvQq2tKu/sgl3xVpkc7ZWuQQ==}
@@ -4101,6 +4124,10 @@ snapshots:
     dependencies:
       '@types/unist': 2.0.11
 
+  '@types/jwt-decode@3.1.0':
+    dependencies:
+      jwt-decode: 4.0.0
+
   '@types/mdast@3.0.15':
     dependencies:
       '@types/unist': 2.0.11
@@ -5154,6 +5181,8 @@ snapshots:
     dependencies:
       jwa: 1.4.2
       safe-buffer: 5.2.1
+
+  jwt-decode@4.0.0: {}
 
   kleur@4.1.5: {}
 
