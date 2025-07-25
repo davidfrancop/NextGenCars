@@ -18,9 +18,11 @@
       "~/*": ["./app/*"]
     }
   },
-  "include": [
-    "remix.env.d.ts",
-    "**/*.ts",
-    "**/*.tsx"
-  ]
+"include": [
+  "remix.env.d.ts",
+  "jwt-decode.d.ts",
+  "**/*.ts",
+  "**/*.tsx",
+  "**/*.d.ts"
+]
 }
