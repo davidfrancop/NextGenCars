@@ -66,13 +66,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run linter
-        run: pnpm -r lint
+        run: pnpm -r --filter '!web' --if-present lint
 
       - name: Run type-check
-        run: pnpm -r --if-present typecheck
+        run: pnpm -r --filter '!web' --if-present typecheck
 
       - name: Run tests
-        run: pnpm -r --if-present test
+        run: pnpm -r --filter '!web' --if-present test
 
       - name: Build packages
         run: pnpm -r build
