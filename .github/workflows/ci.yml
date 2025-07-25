@@ -1,4 +1,3 @@
-# .github/workflows/ci.yml
 name: CI/CD NextGenCars (Node.js 20 + pnpm Monorepo)
 
 on:
@@ -73,7 +72,7 @@ jobs:
         run: pnpm -r --if-present typecheck
 
       - name: Run tests
-        run: pnpm -r test
+        run: pnpm -r --if-present test
 
       - name: Build packages
         run: pnpm -r build
