@@ -1,34 +1,24 @@
 // control/app/root.tsx
-
 import {
   Links,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLocation,
+  useNavigate,
 } from "@remix-run/react";
 import type { LinksFunction } from "@remix-run/node";
-import React from "react";
-import { Sidebar } from "./components/Sidebar";
-import { Header } from "./components/Header";
-import "./tailwind.css";
+import { useEffect } from "react";
+import { decodeJwt } from "~/utils/jwt";
+
+import tailwind from "./tailwind.css?url";
 
 export const links: LinksFunction = () => [
-  { rel: "preconnect", href: "https://fonts.googleapis.com" },
-  {
-    rel: "preconnect",
-    href: "https://fonts.gstatic.com",
-    crossOrigin: "anonymous",
-  },
-  {
-    rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap",
-  },
+  { rel: "stylesheet", href: tailwind },
 ];
 
-export default function App() {
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
-
+export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -37,17 +27,50 @@ export default function App() {
         <Meta />
         <Links />
       </head>
-      <body className="bg-gray-50 font-inter">
-        <Sidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="md:ml-64 min-h-screen flex flex-col">
-          <Header onOpenSidebar={() => setSidebarOpen(true)} />
-          <main className="flex-1 p-4">
-            <Outlet />
-          </main>
-        </div>
+      <body>
+        {children}
         <ScrollRestoration />
         <Scripts />
       </body>
     </html>
+  );
+}
+
+function AuthWrapper({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      if (location.pathname !== "/login") navigate("/login");
+      return;
+    }
+
+    try {
+      const decoded = decodeJwt(token);
+      const isExpired = decoded.exp * 1000 < Date.now();
+
+      if (isExpired) {
+        localStorage.removeItem("token");
+        if (location.pathname !== "/login") navigate("/login");
+      }
+    } catch {
+      localStorage.removeItem("token");
+      if (location.pathname !== "/login") navigate("/login");
+    }
+  }, [location.pathname, navigate]);
+
+  return <>{children}</>;
+}
+
+export default function App() {
+  return (
+    <AuthWrapper>
+      <Outlet />
+    </AuthWrapper>
   );
 }

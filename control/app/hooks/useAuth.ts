@@ -1,13 +1,7 @@
 // control/app/hooks/useAuth.ts
 import { useEffect, useState } from "react";
 import { useNavigate } from "@remix-run/react";
-import jwtDecode from "jwt-decode";
-
-interface JwtPayload {
-  exp: number;
-  role: string;
-  [key: string]: unknown;
-}
+import { decodeJwt } from "~/utils/jwt";
 
 export function useAuth({ redirectTo = "/login" } = {}) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -15,6 +9,8 @@ export function useAuth({ redirectTo = "/login" } = {}) {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const token = localStorage.getItem("token");
     if (!token) {
       navigate(redirectTo);
@@ -22,7 +18,7 @@ export function useAuth({ redirectTo = "/login" } = {}) {
     }
 
     try {
-      const decoded = jwtDecode<JwtPayload>(token);
+      const decoded = decodeJwt(token);
       const isExpired = decoded.exp * 1000 < Date.now();
 
       if (isExpired) {
