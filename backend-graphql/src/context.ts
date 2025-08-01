@@ -1,9 +1,9 @@
-import { PrismaClient } from '@prisma/client'
+// backend-graphql/src/context.ts
+
+import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
 
 export const context = {
-  prisma
+  db: prisma
 }
-
-export type Context = typeof context

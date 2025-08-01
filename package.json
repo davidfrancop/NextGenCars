@@ -6,27 +6,36 @@
     "dev": "concurrently -n backend,control,web -c green,cyan,magenta \"pnpm --filter backend-graphql dev\" \"pnpm --filter control dev\" \"pnpm --filter web dev\"",
     "dev:backend": "pnpm --filter backend-graphql dev",
     "dev:control": "pnpm --filter control dev",
-    "dev:web": "pnpm --filter web dev"
-  },
-  "devDependencies": {
-    "@remix-run/node": "^2.16.8",
-    "@types/node": "^24.1.0",
-    "concurrently": "^8.2.2",
-    "tsx": "^4.20.3",
-    "typescript": "^5.8.3",
-    "vite": "^6.3.5"
+    "dev:web": "pnpm --filter web dev",
+    "build": "pnpm --filter backend-graphql build && pnpm --filter control build && pnpm --filter web build"
   },
   "dependencies": {
+    "@apollo/client": "^3.8.5",
     "@prisma/client": "^6.12.0",
     "@prisma/debug": "^6.12.0",
     "bcryptjs": "^3.0.2",
     "cookie": "^1.0.2",
-    "esbuild": "^0.25.8",
     "graphql": "^16.11.0",
     "graphql-request": "^7.2.0",
     "graphql-yoga": "^5.15.1",
     "jsonwebtoken": "^9.0.2",
     "prisma": "^6.12.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
     "valibot": "^1.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^8.2.2",
+    "cross-env": "^10.0.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.3",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "vite": "^5.4.19"
   }
 }

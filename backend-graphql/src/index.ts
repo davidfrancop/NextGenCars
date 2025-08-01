@@ -6,6 +6,6 @@ import { context } from './context'
 const yoga = createYoga({ schema, context })
 const server = createServer(yoga)
 
-server.listen(4000, () => {
-  console.log('🚀 GraphQL server ready at http://localhost:4000/graphql')
+server.listen(4000, '0.0.0.0', () => {
+  console.log('🚀 GraphQL server ready at http://192.168.178.36:4000/graphql')
 })
