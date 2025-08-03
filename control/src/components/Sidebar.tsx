@@ -46,6 +46,7 @@ export default function Sidebar() {
       <button
         className="md:hidden fixed top-4 left-4 z-50 text-white"
         onClick={() => setIsOpen(true)}
+        aria-label="Open menu"
       >
         <Menu size={28} />
       </button>
@@ -64,7 +65,11 @@ export default function Sidebar() {
           <div>
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-xl font-bold">NextGenCars</h1>
-              <button className="text-white" onClick={() => setIsOpen(false)}>
+              <button
+                className="text-white"
+                onClick={() => setIsOpen(false)}
+                aria-label="Close menu"
+              >
                 <X size={24} />
               </button>
             </div>
@@ -89,6 +94,7 @@ export default function Sidebar() {
           <button
             onClick={handleLogout}
             className="flex items-center space-x-2 text-red-400 hover:text-white hover:bg-red-600 p-2 rounded transition"
+            aria-label="Logout"
           >
             <LogOut size={20} />
             <span>Logout</span>
@@ -119,6 +125,7 @@ export default function Sidebar() {
         <button
           onClick={handleLogout}
           className="flex items-center space-x-2 text-red-400 hover:text-white hover:bg-red-600 p-2 rounded transition"
+          aria-label="Logout"
         >
           <LogOut size={20} />
           <span>Logout</span>

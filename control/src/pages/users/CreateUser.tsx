@@ -102,6 +102,7 @@ export default function CreateUser() {
           value={form.role}
           onChange={handleChange}
           className="w-full px-4 py-2 rounded bg-gray-800 border border-gray-700"
+          aria-label="Role"
         >
           <option value="admin">Admin</option>
           <option value="frontdesk">Frontdesk</option>
