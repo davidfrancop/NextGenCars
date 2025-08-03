@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { db } from "../../db"
+import { eachDayOfInterval, startOfWeek, endOfWeek, format } from "date-fns"
 
 export const resolvers = {
   Query: {
@@ -33,27 +34,57 @@ export const resolvers = {
       }
     },
 
-recentWorkOrders: async () => {
-  console.log("📄 Cargando últimas órdenes de trabajo...")
+    recentWorkOrders: async () => {
+      console.log("📄 Cargando últimas órdenes de trabajo...")
 
-  const orders = await db.work_orders.findMany({
-    orderBy: { created_at: "desc" },
-    take: 5,
-    include: {
-      client: true,
-      vehicle: true,
+      const orders = await db.work_orders.findMany({
+        orderBy: { created_at: "desc" },
+        take: 5,
+        include: {
+          client: true,
+          vehicle: true,
+        },
+      })
+
+      return orders.map((order) => ({
+        id: order.id.toString(),
+        clientName: `${order.client.first_name} ${order.client.last_name}`,
+        vehicleName: `${order.vehicle.make} ${order.vehicle.model}`,
+        vehiclePlate: order.vehicle.plate,
+        createdAt: order.created_at.toISOString(),
+        status: order.status,
+      }))
     },
-  })
 
-  return orders.map((order) => ({
-    id: order.id.toString(),
-    clientName: `${order.client.first_name} ${order.client.last_name}`,
-    vehicleName: `${order.vehicle.make} ${order.vehicle.model}`,
-    vehiclePlate: order.vehicle.plate,
-    createdAt: order.created_at.toISOString(),
-    status: order.status,
-  }))
-},
+    appointmentsThisWeek: async () => {
+      console.log("📆 Generando gráfico de citas semanales...")
+
+      const start = startOfWeek(new Date(), { weekStartsOn: 1 }) // Monday
+      const end = endOfWeek(new Date(), { weekStartsOn: 1 })     // Sunday
+
+      const appointments = await db.appointments.findMany({
+        where: {
+          date: {
+            gte: start,
+            lte: end,
+          },
+        },
+      })
+
+      const weekDays = eachDayOfInterval({ start, end })
+
+      const result = weekDays.map((day) => {
+        const label = format(day, "EEE") // 'Mon', 'Tue', etc.
+        const count = appointments.filter(
+          (a) => format(new Date(a.date), "EEE") === label
+        ).length
+
+        return { day: label, count }
+      })
+
+      console.log("📊 Datos de citas por día:", result)
+      return result
+    },
   },
 
   Mutation: {

@@ -32,11 +32,17 @@ export const schema = createSchema({
       status: String!
     }
 
+    type AppointmentsPerDay {
+      day: String!
+      count: Int!
+    }
+
     type Query {
       hello: String!
       users: [User!]!
       dashboardStats: DashboardStats!
       recentWorkOrders: [WorkOrderPreview!]!
+      appointmentsThisWeek: [AppointmentsPerDay!]!
     }
 
     type Mutation {

@@ -6,8 +6,12 @@ import { ApolloProvider } from "@apollo/client"
 import client from "./apollo/client"
 import { AuthProvider, useAuth } from "./auth/AuthProvider"
 import "./index.css"
+
 import Login from "./pages/Login"
 import AdminDashboard from "./pages/dashboards/AdminDashboard"
+import FrontdeskDashboard from "./pages/dashboards/FrontdeskDashboard"
+import MechanicDashboard from "./pages/dashboards/MechanicDashboard"
+import Users from "./pages/users/Users"
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -26,6 +30,30 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               element={
                 <PrivateRoute>
                   <AdminDashboard />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/dashboard/frontdesk"
+              element={
+                <PrivateRoute>
+                  <FrontdeskDashboard />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/dashboard/mechanic"
+              element={
+                <PrivateRoute>
+                  <MechanicDashboard />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <PrivateRoute>
+                  <Users />
                 </PrivateRoute>
               }
             />

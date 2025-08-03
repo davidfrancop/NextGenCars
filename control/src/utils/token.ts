@@ -17,13 +17,21 @@ export function removeToken() {
   localStorage.removeItem(TOKEN_KEY)
 }
 
-// ✅ Extrae el rol del usuario desde el token JWT
+// Extrae el rol del usuario desde un token dado
 export function getRoleFromToken(token: string): string | null {
   try {
     const payload = JSON.parse(atob(token.split(".")[1]))
-    return payload.role || null
+    return payload.role?.toLowerCase() || null
   } catch (e) {
     console.error("❌ Error decoding token:", e)
     return null
   }
 }
+
+// ✅ Obtiene el rol actual directamente desde localStorage
+export function getCurrentUserRole(): string | null {
+  const token = getToken()
+  if (!token) return null
+  return getRoleFromToken(token)
+}
+

@@ -1,6 +1,6 @@
 // src/components/Sidebar.tsx
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import {
   Home,
   Users,
@@ -12,24 +12,33 @@ import {
   X,
 } from "lucide-react"
 import { Link, useNavigate, useLocation } from "react-router-dom"
-
-const links = [
-  { to: "/dashboard", label: "Dashboard", icon: <Home size={20} /> },
-  { to: "/clients", label: "Clients", icon: <Users size={20} /> },
-  { to: "/vehicles", label: "Vehicles", icon: <Car size={20} /> },
-  { to: "/orders", label: "Work Orders", icon: <FileText size={20} /> },
-  { to: "/users", label: "Users", icon: <Settings size={20} /> },
-]
+import { getCurrentUserRole } from "@/utils/token"
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
+  const role = useMemo(() => getCurrentUserRole(), [])
 
   const handleLogout = () => {
-    localStorage.removeItem("token")
+    localStorage.removeItem("nextgencars_token")
     navigate("/login")
   }
+
+  const links = useMemo(() => {
+    const base = [
+      { to: "/dashboard", label: "Dashboard", icon: <Home size={20} /> },
+      { to: "/clients", label: "Clients", icon: <Users size={20} /> },
+      { to: "/vehicles", label: "Vehicles", icon: <Car size={20} /> },
+      { to: "/orders", label: "Work Orders", icon: <FileText size={20} /> },
+    ]
+
+    if (role === "admin") {
+      base.push({ to: "/users", label: "Users", icon: <Settings size={20} /> })
+    }
+
+    return base
+  }, [role])
 
   return (
     <>
@@ -50,7 +59,7 @@ export default function Sidebar() {
       >
         <aside
           className="w-60 h-full bg-gray-800 p-4 flex flex-col justify-between"
-          onClick={(e) => e.stopPropagation()} // evita cerrar al hacer click dentro
+          onClick={(e) => e.stopPropagation()}
         >
           <div>
             <div className="flex justify-between items-center mb-6">
@@ -87,7 +96,7 @@ export default function Sidebar() {
         </aside>
       </div>
 
-      {/* Sidebar DESKTOP (siempre visible) */}
+      {/* Sidebar DESKTOP */}
       <aside className="hidden md:flex md:flex-col md:justify-between md:w-60 md:h-screen md:bg-gray-800 md:p-4">
         <div>
           <h1 className="text-xl font-bold mb-6">NextGenCars</h1>
