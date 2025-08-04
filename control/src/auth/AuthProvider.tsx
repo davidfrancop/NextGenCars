@@ -1,9 +1,17 @@
 // src/auth/AuthProvider.tsx
 import { createContext, useContext, useEffect, useState } from "react"
-import { getToken, saveToken, removeToken } from "../utils/token"
+import { getToken, saveToken, removeToken, getRoleFromToken, parseToken } from "@/utils/token"
+
+type User = {
+  role: string
+  email: string
+  username?: string
+  [key: string]: any
+}
 
 type AuthContextType = {
   isAuthenticated: boolean
+  user: User | null
   login: (token: string) => void
   logout: () => void
 }
@@ -12,24 +20,36 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
     const token = getToken()
-    if (token) setIsAuthenticated(true)
+    if (token) {
+      const decoded = parseToken(token)
+      if (decoded?.role) {
+        setIsAuthenticated(true)
+        setUser(decoded)
+      }
+    }
   }, [])
 
   const login = (token: string) => {
     saveToken(token)
-    setIsAuthenticated(true)
+    const decoded = parseToken(token)
+    if (decoded?.role) {
+      setIsAuthenticated(true)
+      setUser(decoded)
+    }
   }
 
   const logout = () => {
     removeToken()
     setIsAuthenticated(false)
+    setUser(null)
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

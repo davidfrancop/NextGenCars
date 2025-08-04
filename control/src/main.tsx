@@ -4,7 +4,7 @@ import ReactDOM from "react-dom/client"
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { ApolloProvider } from "@apollo/client"
 import client from "./apollo/client"
-import { AuthProvider, useAuth } from "./auth/AuthProvider"
+import { AuthProvider } from "./auth/AuthProvider"
 import "./index.css"
 
 import Login from "./pages/Login"
@@ -12,11 +12,7 @@ import AdminDashboard from "./pages/dashboards/AdminDashboard"
 import FrontdeskDashboard from "./pages/dashboards/FrontdeskDashboard"
 import MechanicDashboard from "./pages/dashboards/MechanicDashboard"
 import Users from "./pages/users/Users"
-
-function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth()
-  return isAuthenticated ? children : <Navigate to="/login" />
-}
+import RoleProtectedRoute from "./components/RoleProtectedRoute"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -25,38 +21,44 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+
+            {/* Dashboard routes */}
             <Route
               path="/dashboard/admin"
               element={
-                <PrivateRoute>
+                <RoleProtectedRoute allowedRoles={["admin"]}>
                   <AdminDashboard />
-                </PrivateRoute>
+                </RoleProtectedRoute>
               }
             />
             <Route
               path="/dashboard/frontdesk"
               element={
-                <PrivateRoute>
+                <RoleProtectedRoute allowedRoles={["frontdesk"]}>
                   <FrontdeskDashboard />
-                </PrivateRoute>
+                </RoleProtectedRoute>
               }
             />
             <Route
               path="/dashboard/mechanic"
               element={
-                <PrivateRoute>
+                <RoleProtectedRoute allowedRoles={["mechanic"]}>
                   <MechanicDashboard />
-                </PrivateRoute>
+                </RoleProtectedRoute>
               }
             />
+
+            {/* Admin-only route */}
             <Route
               path="/users"
               element={
-                <PrivateRoute>
+                <RoleProtectedRoute allowedRoles={["admin"]}>
                   <Users />
-                </PrivateRoute>
+                </RoleProtectedRoute>
               }
             />
+
+            {/* Fallback */}
             <Route path="*" element={<Navigate to="/login" />} />
           </Routes>
         </BrowserRouter>

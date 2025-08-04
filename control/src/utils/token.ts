@@ -17,15 +17,22 @@ export function removeToken() {
   localStorage.removeItem(TOKEN_KEY)
 }
 
-// Extrae el rol del usuario desde un token dado
-export function getRoleFromToken(token: string): string | null {
+// Decodifica el token completo y devuelve el payload
+export function parseToken(token: string): any | null {
   try {
-    const payload = JSON.parse(atob(token.split(".")[1]))
-    return payload.role?.toLowerCase() || null
+    const payloadBase64 = token.split(".")[1]
+    const decodedPayload = atob(payloadBase64)
+    return JSON.parse(decodedPayload)
   } catch (e) {
-    console.error("❌ Error decoding token:", e)
+    console.error("❌ Error parsing token:", e)
     return null
   }
+}
+
+// Extrae el rol del usuario desde un token dado
+export function getRoleFromToken(token: string): string | null {
+  const payload = parseToken(token)
+  return payload?.role?.toLowerCase() || null
 }
 
 // ✅ Obtiene el rol actual directamente desde localStorage
@@ -34,4 +41,3 @@ export function getCurrentUserRole(): string | null {
   if (!token) return null
   return getRoleFromToken(token)
 }
-
