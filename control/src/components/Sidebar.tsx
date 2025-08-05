@@ -26,8 +26,17 @@ export default function Sidebar() {
   }
 
   const links = useMemo(() => {
+    const dashboardPath =
+      role === "admin"
+        ? "/dashboard/admin"
+        : role === "frontdesk"
+        ? "/dashboard/frontdesk"
+        : role === "mechanic"
+        ? "/dashboard/mechanic"
+        : "/dashboard" // fallback
+
     const base = [
-      { to: "/dashboard", label: "Dashboard", icon: <Home size={20} /> },
+      { to: dashboardPath, label: "Dashboard", icon: <Home size={20} /> },
       { to: "/clients", label: "Clients", icon: <Users size={20} /> },
       { to: "/vehicles", label: "Vehicles", icon: <Car size={20} /> },
       { to: "/orders", label: "Work Orders", icon: <FileText size={20} /> },

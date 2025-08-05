@@ -1,27 +1,44 @@
-// src/pages/users/CreateUser.tsx
+// src/pages/users/EditUser.tsx
 
-import { useMutation } from "@apollo/client"
-import { CREATE_USER } from "@/graphql/mutations/createUser"
-import { useNavigate } from "react-router-dom"
-import { useState } from "react"
+import { useQuery, useMutation } from "@apollo/client"
+import { GET_USERS } from "@/graphql/queries/getUsers"
+import { UPDATE_USER } from "@/graphql/mutations/updateUser"
+import { useParams, useNavigate } from "react-router-dom"
+import { useEffect, useState } from "react"
 
 interface FormData {
   username: string
   email: string
-  password: string
   role: string
+  password: string
 }
 
-export default function CreateUser() {
+export default function EditUser() {
+  const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
-  const [createUser] = useMutation(CREATE_USER)
-
   const [formData, setFormData] = useState<FormData>({
     username: "",
     email: "",
-    password: "",
     role: "",
+    password: "",
   })
+
+  const { data, loading, error } = useQuery(GET_USERS)
+  const [updateUser] = useMutation(UPDATE_USER)
+
+  useEffect(() => {
+    if (data?.users && userId) {
+      const user = data.users.find((u: any) => u.user_id === parseInt(userId))
+      if (user) {
+        setFormData({
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          password: "",
+        })
+      }
+    }
+  }, [data, userId])
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -31,25 +48,30 @@ export default function CreateUser() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!userId) return
 
     try {
-      await createUser({
+      await updateUser({
         variables: {
+          userId: parseInt(userId),
           username: formData.username,
           email: formData.email,
-          password: formData.password,
           role: formData.role,
+          password: formData.password || null,
         },
       })
       navigate("/users")
     } catch (err) {
-      console.error("Error creating user:", err)
+      console.error("Error updating user:", err)
     }
   }
 
+  if (loading) return <p className="text-center text-gray-400">Loading user...</p>
+  if (error) return <p className="text-center text-red-500">Error loading user.</p>
+
   return (
     <div className="p-6 text-white max-w-xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">Create New User</h2>
+      <h2 className="text-2xl font-bold mb-6">Edit User</h2>
 
       <form
         onSubmit={handleSubmit}
@@ -88,22 +110,6 @@ export default function CreateUser() {
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm mb-1 text-gray-300">
-            Password
-          </label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            placeholder="Password"
-            value={formData.password}
-            onChange={handleChange}
-            className="w-full px-4 py-2 rounded bg-gray-900 border border-gray-600"
-            required
-          />
-        </div>
-
-        <div>
           <label htmlFor="role" className="block text-sm mb-1 text-gray-300">
             Role
           </label>
@@ -122,11 +128,26 @@ export default function CreateUser() {
           </select>
         </div>
 
+        <div>
+          <label htmlFor="password" className="block text-sm mb-1 text-gray-300">
+            New Password (optional)
+          </label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Leave empty to keep current password"
+            value={formData.password}
+            onChange={handleChange}
+            className="w-full px-4 py-2 rounded bg-gray-900 border border-gray-600"
+          />
+        </div>
+
         <button
           type="submit"
           className="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded font-semibold transition"
         >
-          Create User
+          Save Changes
         </button>
       </form>
     </div>

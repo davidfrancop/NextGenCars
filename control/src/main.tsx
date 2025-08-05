@@ -1,4 +1,5 @@
 // src/main.tsx
+
 import React from "react"
 import ReactDOM from "react-dom/client"
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
@@ -11,7 +12,12 @@ import Login from "./pages/Login"
 import AdminDashboard from "./pages/dashboards/AdminDashboard"
 import FrontdeskDashboard from "./pages/dashboards/FrontdeskDashboard"
 import MechanicDashboard from "./pages/dashboards/MechanicDashboard"
+
 import Users from "./pages/users/Users"
+import CreateUser from "./pages/users/CreateUser"
+import EditUser from "./pages/users/EditUser"
+
+import Layout from "./components/Layout"
 import RoleProtectedRoute from "./components/RoleProtectedRoute"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -20,43 +26,36 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <AuthProvider>
         <BrowserRouter>
           <Routes>
+            {/* Public login */}
             <Route path="/login" element={<Login />} />
 
-            {/* Dashboard routes */}
+            {/* Dashboard por rol con Layout */}
             <Route
-              path="/dashboard/admin"
+              path="/dashboard"
               element={
-                <RoleProtectedRoute allowedRoles={["admin"]}>
-                  <AdminDashboard />
+                <RoleProtectedRoute allowedRoles={["admin", "frontdesk", "mechanic"]}>
+                  <Layout />
                 </RoleProtectedRoute>
               }
-            />
-            <Route
-              path="/dashboard/frontdesk"
-              element={
-                <RoleProtectedRoute allowedRoles={["frontdesk"]}>
-                  <FrontdeskDashboard />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/mechanic"
-              element={
-                <RoleProtectedRoute allowedRoles={["mechanic"]}>
-                  <MechanicDashboard />
-                </RoleProtectedRoute>
-              }
-            />
+            >
+              <Route path="admin" element={<AdminDashboard />} />
+              <Route path="frontdesk" element={<FrontdeskDashboard />} />
+              <Route path="mechanic" element={<MechanicDashboard />} />
+            </Route>
 
-            {/* Admin-only route */}
+            {/* Users panel (admin only) */}
             <Route
               path="/users"
               element={
                 <RoleProtectedRoute allowedRoles={["admin"]}>
-                  <Users />
+                  <Layout />
                 </RoleProtectedRoute>
               }
-            />
+            >
+              <Route index element={<Users />} />
+              <Route path="create" element={<CreateUser />} />
+              <Route path="edit/:userId" element={<EditUser />} />
+            </Route>
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/login" />} />
@@ -66,3 +65,4 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     </ApolloProvider>
   </React.StrictMode>
 )
+

@@ -1,6 +1,5 @@
-// src/auth/AuthProvider.tsx
 import { createContext, useContext, useEffect, useState } from "react"
-import { getToken, saveToken, removeToken, getRoleFromToken, parseToken } from "@/utils/token"
+import { getToken, saveToken, removeToken, parseToken } from "@/utils/token"
 
 type User = {
   role: string
@@ -14,6 +13,7 @@ type AuthContextType = {
   user: User | null
   login: (token: string) => void
   logout: () => void
+  loading: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -21,6 +21,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const token = getToken()
@@ -31,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(decoded)
       }
     }
+    setLoading(false) // ✅ marcar como completado después de verificar
   }, [])
 
   const login = (token: string) => {
@@ -49,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   )
