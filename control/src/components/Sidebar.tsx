@@ -33,7 +33,7 @@ export default function Sidebar() {
         ? "/dashboard/frontdesk"
         : role === "mechanic"
         ? "/dashboard/mechanic"
-        : "/dashboard" // fallback
+        : "/dashboard"
 
     const base = [
       { to: dashboardPath, label: "Dashboard", icon: <Home size={20} /> },
@@ -56,6 +56,7 @@ export default function Sidebar() {
         className="md:hidden fixed top-4 left-4 z-50 text-white"
         onClick={() => setIsOpen(true)}
         aria-label="Open menu"
+        title="Open menu"
       >
         <Menu size={28} />
       </button>
@@ -78,6 +79,7 @@ export default function Sidebar() {
                 className="text-white"
                 onClick={() => setIsOpen(false)}
                 aria-label="Close menu"
+                title="Close menu"
               >
                 <X size={24} />
               </button>
@@ -92,6 +94,8 @@ export default function Sidebar() {
                   className={`flex items-center space-x-2 text-gray-300 hover:text-white hover:bg-gray-700 p-2 rounded transition ${
                     location.pathname === link.to ? "bg-gray-700" : ""
                   }`}
+                  title={link.label}
+                  aria-label={link.label}
                 >
                   {link.icon}
                   <span>{link.label}</span>
@@ -104,6 +108,7 @@ export default function Sidebar() {
             onClick={handleLogout}
             className="flex items-center space-x-2 text-red-400 hover:text-white hover:bg-red-600 p-2 rounded transition"
             aria-label="Logout"
+            title="Logout"
           >
             <LogOut size={20} />
             <span>Logout</span>
@@ -123,6 +128,8 @@ export default function Sidebar() {
                 className={`flex items-center space-x-2 text-gray-300 hover:text-white hover:bg-gray-700 p-2 rounded transition ${
                   location.pathname === link.to ? "bg-gray-700" : ""
                 }`}
+                title={link.label}
+                aria-label={link.label}
               >
                 {link.icon}
                 <span>{link.label}</span>
@@ -135,6 +142,7 @@ export default function Sidebar() {
           onClick={handleLogout}
           className="flex items-center space-x-2 text-red-400 hover:text-white hover:bg-red-600 p-2 rounded transition"
           aria-label="Logout"
+          title="Logout"
         >
           <LogOut size={20} />
           <span>Logout</span>

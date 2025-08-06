@@ -24,6 +24,11 @@ import Clients from "./pages/clients/Clients"
 import CreateClient from "./pages/clients/CreateClient"
 import EditClient from "./pages/clients/EditClient"
 
+// Vehículos
+import Vehicles from "./pages/vehicles/Vehicles"
+import CreateVehicle from "./pages/vehicles/CreateVehicle"
+import EditVehicle from "./pages/vehicles/EditVehicle"
+
 // Layout y protección
 import Layout from "./components/Layout"
 import RoleProtectedRoute from "./components/RoleProtectedRoute"
@@ -65,7 +70,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               <Route path="edit/:userId" element={<EditUser />} />
             </Route>
 
-            {/* ✅ Gestión de clientes (admin y frontdesk) */}
+            {/* Gestión de clientes (admin y frontdesk) */}
             <Route
               path="/clients"
               element={
@@ -77,6 +82,20 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               <Route index element={<Clients />} />
               <Route path="create" element={<CreateClient />} />
               <Route path="edit/:clientId" element={<EditClient />} />
+            </Route>
+
+            {/* ✅ Gestión de vehículos (admin y frontdesk) */}
+            <Route
+              path="/vehicles"
+              element={
+                <RoleProtectedRoute allowedRoles={["admin", "frontdesk"]}>
+                  <Layout />
+                </RoleProtectedRoute>
+              }
+            >
+              <Route index element={<Vehicles />} />
+              <Route path="create" element={<CreateVehicle />} />
+              <Route path="edit/:vehicleId" element={<EditVehicle />} />
             </Route>
 
             {/* Fallback */}

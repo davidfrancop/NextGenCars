@@ -4,9 +4,12 @@ import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { db } from "../../db"
 import { eachDayOfInterval, startOfWeek, endOfWeek, format } from "date-fns"
+import { vehicleResolvers } from "./vehicles"
 
 export const resolvers = {
   Query: {
+    ...vehicleResolvers.Query,
+
     hello: () => "Hello from NextGen Cars GraphQL backend",
 
     users: async () => {
@@ -59,8 +62,8 @@ export const resolvers = {
     appointmentsThisWeek: async () => {
       console.log("📆 Generando gráfico de citas semanales...")
 
-      const start = startOfWeek(new Date(), { weekStartsOn: 1 }) // Monday
-      const end = endOfWeek(new Date(), { weekStartsOn: 1 })     // Sunday
+      const start = startOfWeek(new Date(), { weekStartsOn: 1 })
+      const end = endOfWeek(new Date(), { weekStartsOn: 1 })
 
       const appointments = await db.appointments.findMany({
         where: {
@@ -97,6 +100,8 @@ export const resolvers = {
   },
 
   Mutation: {
+    ...vehicleResolvers.Mutation,
+
     loginUser: async (
       _: unknown,
       args: { email: string; password: string }

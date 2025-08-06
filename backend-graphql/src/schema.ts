@@ -1,9 +1,11 @@
 // backend-graphql/src/schema.ts
+
 import { createSchema } from "graphql-yoga"
 import { resolvers } from "./resolvers"
 
 export const schema = createSchema({
   typeDefs: /* GraphQL */ `
+
     type User {
       user_id: Int!
       username: String!
@@ -19,7 +21,17 @@ export const schema = createSchema({
       email: String
       phone: String
       country: String
-      type: String!         # "personal" o "company"
+      type: String!
+    }
+
+    type Vehicle {
+      vehicle_id: Int!
+      make: String!
+      model: String!
+      year: Int!
+      license_plate: String!   # ✅ CAMBIADO (antes era plate)
+      vin: String!
+      client: Client           # ✅ ahora opcional para evitar error si null
     }
 
     type LoginResponse {
@@ -55,22 +67,28 @@ export const schema = createSchema({
       recentWorkOrders: [WorkOrderPreview!]!
       appointmentsThisWeek: [AppointmentsPerDay!]!
 
-      # ✅ Nueva query para frontend
       personalClients: [Client!]!
+      vehicles: [Vehicle!]!
     }
 
     type Mutation {
       loginUser(email: String!, password: String!): LoginResponse!
 
-      # Futuras mutaciones:
-      # createClient(...): Client!
-      # deleteClient(clientId: Int!): Boolean
       createUser(
         username: String!
         email: String!
         password: String!
         role: String!
       ): User!
+
+      createVehicle(
+        client_id: Int!
+        make: String!
+        model: String!
+        year: Int!
+        license_plate: String!   # ✅ corregido
+        vin: String!
+      ): Vehicle!
     }
   `,
   resolvers,
