@@ -47,11 +47,11 @@ export const resolvers = {
       })
 
       return orders.map((order) => ({
-        id: order.id.toString(),
+        id: order.work_order_id.toString(),
         clientName: `${order.client.first_name} ${order.client.last_name}`,
         vehicleName: `${order.vehicle.make} ${order.vehicle.model}`,
-        vehiclePlate: order.vehicle.plate,
-        createdAt: order.created_at.toISOString(),
+        vehiclePlate: order.vehicle.license_plate,
+        createdAt: order.created_at?.toISOString() || "",
         status: order.status,
       }))
     },
@@ -74,7 +74,7 @@ export const resolvers = {
       const weekDays = eachDayOfInterval({ start, end })
 
       const result = weekDays.map((day) => {
-        const label = format(day, "EEE") // 'Mon', 'Tue', etc.
+        const label = format(day, "EEE")
         const count = appointments.filter(
           (a) => format(new Date(a.date), "EEE") === label
         ).length
@@ -83,6 +83,15 @@ export const resolvers = {
       })
 
       console.log("📊 Datos de citas por día:", result)
+      return result
+    },
+
+    personalClients: async () => {
+      console.log("👥 Cargando clientes personales...")
+      const result = await db.clients.findMany({
+        where: { company_id: null },
+      })
+      console.log(`🔎 ${result.length} clientes personales encontrados`)
       return result
     },
   },
@@ -129,7 +138,6 @@ export const resolvers = {
       )
 
       console.log("✅ Login exitoso. Token generado.")
-
       return { token }
     },
 

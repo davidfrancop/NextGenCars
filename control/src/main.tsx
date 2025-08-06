@@ -8,15 +8,23 @@ import client from "./apollo/client"
 import { AuthProvider } from "./auth/AuthProvider"
 import "./index.css"
 
+// Páginas
 import Login from "./pages/Login"
 import AdminDashboard from "./pages/dashboards/AdminDashboard"
 import FrontdeskDashboard from "./pages/dashboards/FrontdeskDashboard"
 import MechanicDashboard from "./pages/dashboards/MechanicDashboard"
 
+// Usuarios
 import Users from "./pages/users/Users"
 import CreateUser from "./pages/users/CreateUser"
 import EditUser from "./pages/users/EditUser"
 
+// Clientes
+import Clients from "./pages/clients/Clients"
+import CreateClient from "./pages/clients/CreateClient"
+import EditClient from "./pages/clients/EditClient"
+
+// Layout y protección
 import Layout from "./components/Layout"
 import RoleProtectedRoute from "./components/RoleProtectedRoute"
 
@@ -26,10 +34,10 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Public login */}
+            {/* Login público */}
             <Route path="/login" element={<Login />} />
 
-            {/* Dashboard por rol con Layout */}
+            {/* Dashboard por rol */}
             <Route
               path="/dashboard"
               element={
@@ -43,7 +51,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               <Route path="mechanic" element={<MechanicDashboard />} />
             </Route>
 
-            {/* Users panel (admin only) */}
+            {/* Gestión de usuarios (solo admin) */}
             <Route
               path="/users"
               element={
@@ -57,6 +65,20 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               <Route path="edit/:userId" element={<EditUser />} />
             </Route>
 
+            {/* ✅ Gestión de clientes (admin y frontdesk) */}
+            <Route
+              path="/clients"
+              element={
+                <RoleProtectedRoute allowedRoles={["admin", "frontdesk"]}>
+                  <Layout />
+                </RoleProtectedRoute>
+              }
+            >
+              <Route index element={<Clients />} />
+              <Route path="create" element={<CreateClient />} />
+              <Route path="edit/:clientId" element={<EditClient />} />
+            </Route>
+
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/login" />} />
           </Routes>
@@ -65,4 +87,3 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     </ApolloProvider>
   </React.StrictMode>
 )
-

@@ -9,10 +9,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 // --- users.prisma ---
-// prisma/models/users.prisma
-
 model users {
   user_id       Int       @id @default(autoincrement())
   username      String    @unique @db.VarChar(50)
@@ -26,11 +23,7 @@ model users {
 }
 
 // --- clients.prisma ---
-// prisma/models/clients.prisma
-
 model clients {
-  work_orders    work_orders[]
-
   client_id     Int       @id @default(autoincrement())
   first_name    String
   last_name     String
@@ -41,71 +34,71 @@ model clients {
   country       String?
   city          String?
   postal_code   String?
+
   company_id    Int?                          // FK opcional
   company       companies? @relation(fields: [company_id], references: [company_id])
+
   created_at    DateTime? @default(now())
   updated_at    DateTime? @default(now())
+
   vehicles      vehicles[]
+  work_orders   work_orders[]
 }
 
 // --- companies.prisma ---
-// prisma/models/companies.prisma
-
 model companies {
   company_id     Int       @id @default(autoincrement())
   name           String
-  tax_id         String?   @unique // número fiscal (opcional, pero único)
+  tax_id         String?   @unique
   email          String?
   phone          String?
   address        String?
   country        String?
   city           String?
   postal_code    String?
+
   clients        clients[]
-  vehicles       vehicles[] // si querés asociar directamente vehículos a la empresa
+  vehicles       vehicles[]
+
   created_at     DateTime?  @default(now())
   updated_at     DateTime?  @default(now())
 }
 
 // --- vehicles.prisma ---
-// prisma/models/vehicles.prisma
-
 model vehicles {
-  appointments      appointments[]
-  pre_work_orders   pre_work_orders[]
+  vehicle_id         Int       @id @default(autoincrement())
+  client_id          Int
+  company_id         Int?
+  make               String
+  model              String
+  year               Int
+  vin                String     @unique
+  license_plate      String     @unique
+  hsn                String     @db.VarChar(4)
+  tsn                String     @db.VarChar(3)
+  fuel_type          String
+  drive              String
+  transmission       String
+  tuv_date           DateTime?
+  km                 Int
+  last_service_date  DateTime?
+  created_at         DateTime?  @default(now())
+  updated_at         DateTime?  @default(now())
 
-  vehicle_id     Int       @id @default(autoincrement())
-  client_id      Int
-  company_id     Int?                    // si pertenece a una empresa
-  make           String
-  model          String
-  year           Int
-  vin            String     @unique
-  license_plate  String     @unique
-  hsn            String     @db.VarChar(4)
-  tsn            String     @db.VarChar(3)
-  fuel_type      String
-  drive          String
-  transmission   String
-  tuv_date       DateTime?              // solo mes y año, pero Prisma lo guarda completo
-  km             Int
-  last_service_date DateTime?
-  created_at     DateTime?  @default(now())
-  updated_at     DateTime?  @default(now())
+  client             clients    @relation(fields: [client_id], references: [client_id])
+  company            companies? @relation(fields: [company_id], references: [company_id])
 
-  client         clients    @relation(fields: [client_id], references: [client_id])
-  company        companies? @relation(fields: [company_id], references: [company_id])
-  work_orders    work_orders[]
+  appointments       appointments[]
+  pre_work_orders    pre_work_orders[]
+  work_orders        work_orders[]
 }
 
 // --- appointments.prisma ---
-// prisma/models/appointments.prisma
-
 model appointments {
   appointment_id Int       @id @default(autoincrement())
   vehicle_id     Int
   date           DateTime
-  status         String    @default("scheduled") // scheduled, completed, canceled, etc.
+  status         String    @default("scheduled")
   notes          String?
 
   created_at     DateTime? @default(now())
@@ -115,50 +108,44 @@ model appointments {
 }
 
 // --- inspection_templates.prisma ---
-// prisma/models/inspection_templates.prisma
-
 model inspection_templates {
-  pre_work_orders pre_work_orders[]
+  template_id     Int       @id @default(autoincrement())
+  name            String
+  description     String?
+  points          Json
+  created_at      DateTime? @default(now())
+  updated_at      DateTime? @default(now())
 
-  template_id    Int       @id @default(autoincrement())
-  name           String    // Ej: Básica, Intermedia, Completa
-  description    String?
-  points         Json      // Lista de puntos en formato JSON
-  created_at     DateTime? @default(now())
-  updated_at     DateTime? @default(now())
+  pre_work_orders pre_work_orders[]
 }
 
 // --- pre_work_orders.prisma ---
-// prisma/models/pre_work_orders.prisma
-
 model pre_work_orders {
   pre_work_order_id Int       @id @default(autoincrement())
   vehicle_id        Int
   template_id       Int
   inspector_name    String?
-  findings          Json       // Resultado de la revisión
-  approved          Boolean?   // Aprobado para generar orden de trabajo
+  findings          Json
+  approved          Boolean?
 
-  created_at        DateTime?  @default(now())
-  updated_at        DateTime?  @default(now())
+  created_at        DateTime? @default(now())
+  updated_at        DateTime? @default(now())
 
   vehicle           vehicles   @relation(fields: [vehicle_id], references: [vehicle_id])
   template          inspection_templates @relation(fields: [template_id], references: [template_id])
 }
 
 // --- work_orders.prisma ---
-// prisma/models/work_orders.prisma
-
 model work_orders {
   work_order_id   Int       @id @default(autoincrement())
   vehicle_id      Int
   client_id       Int
   description     String?
-  status          String    @default("open") // open, in_progress, completed, canceled
-  tasks           Json?                     // Detalles de lo que se hará
-  start_date      DateTime?                 // Cuándo se comenzó
-  end_date        DateTime?                 // Cuándo se completó
-  total_cost      Float?                    // Precio total del servicio
+  status          String    @default("open")
+  tasks           Json?
+  start_date      DateTime?
+  end_date        DateTime?
+  total_cost      Float?
 
   created_at      DateTime? @default(now())
   updated_at      DateTime? @default(now())
@@ -169,19 +156,17 @@ model work_orders {
 }
 
 // --- invoices.prisma ---
-// prisma/models/invoices.prisma
-
 model invoices {
-  invoice_id     Int       @id @default(autoincrement())
-  work_order_id  Int       @unique
-  issue_date     DateTime  @default(now())
-  due_date       DateTime?
-  total_amount   Float
-  paid           Boolean   @default(false)
-  payment_method String?   // cash, card, transfer, etc.
+  invoice_id      Int       @id @default(autoincrement())
+  work_order_id   Int       @unique
+  issue_date      DateTime  @default(now())
+  due_date        DateTime?
+  total_amount    Float
+  paid            Boolean   @default(false)
+  payment_method  String?
 
-  created_at     DateTime? @default(now())
-  updated_at     DateTime? @default(now())
+  created_at      DateTime? @default(now())
+  updated_at      DateTime? @default(now())
 
-  work_order     work_orders @relation(fields: [work_order_id], references: [work_order_id])
+  work_order      work_orders @relation(fields: [work_order_id], references: [work_order_id])
 }
