@@ -1,12 +1,29 @@
 // control/src/pages/vehicles/Vehicles.tsx
 
-import { useQuery } from "@apollo/client"
+import { useQuery, useMutation } from "@apollo/client"
 import { Link } from "react-router-dom"
 import { GET_VEHICLES } from "@/graphql/queries/getVehicles"
+import { DELETE_VEHICLE } from "@/graphql/mutations/deleteVehicle"
 import { Car, Pencil, Trash2, Plus } from "lucide-react"
 
 export default function Vehicles() {
-  const { data, loading, error } = useQuery(GET_VEHICLES)
+  const { data, loading, error, refetch } = useQuery(GET_VEHICLES)
+
+  const [deleteVehicle] = useMutation(DELETE_VEHICLE, {
+    onCompleted: () => {
+      refetch() // actualiza la lista después de borrar
+    },
+    onError: (error) => {
+      alert("Failed to delete vehicle: " + error.message)
+    },
+  })
+
+  const handleDelete = (vehicleId: number) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this vehicle?")
+    if (confirmDelete) {
+      deleteVehicle({ variables: { vehicleId } })
+    }
+  }
 
   return (
     <div className="p-6 text-white">
@@ -80,9 +97,7 @@ export default function Vehicles() {
                       className="text-red-500 hover:text-red-400"
                       title="Delete vehicle"
                       aria-label="Delete vehicle"
-                      onClick={() => {
-                        // TODO: Implement delete logic
-                      }}
+                      onClick={() => handleDelete(v.vehicle_id)}
                     >
                       <Trash2 size={18} />
                     </button>

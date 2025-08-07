@@ -29,9 +29,9 @@ export const schema = createSchema({
       make: String!
       model: String!
       year: Int!
-      license_plate: String!   # ✅ CAMBIADO (antes era plate)
+      license_plate: String!
       vin: String!
-      client: Client           # ✅ ahora opcional para evitar error si null
+      client: Client
     }
 
     type LoginResponse {
@@ -68,6 +68,7 @@ export const schema = createSchema({
       appointmentsThisWeek: [AppointmentsPerDay!]!
 
       personalClients: [Client!]!
+      clients: [Client!]!         # ✅ nueva query global de clientes
       vehicles: [Vehicle!]!
     }
 
@@ -86,9 +87,20 @@ export const schema = createSchema({
         make: String!
         model: String!
         year: Int!
-        license_plate: String!   # ✅ corregido
+        license_plate: String!
         vin: String!
       ): Vehicle!
+
+      deleteVehicle(vehicleId: Int!): Boolean!
+
+      createClient(                 # ✅ nueva mutación
+        first_name: String!
+        last_name: String!
+        email: String
+        phone: String
+        country: String
+        type: String!
+      ): Client!
     }
   `,
   resolvers,

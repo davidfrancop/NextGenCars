@@ -92,10 +92,15 @@ export const resolvers = {
     personalClients: async () => {
       console.log("👥 Cargando clientes personales...")
       const result = await db.clients.findMany({
-        where: { company_id: null },
+        where: { type: "personal" },
       })
       console.log(`🔎 ${result.length} clientes personales encontrados`)
       return result
+    },
+
+    clients: async () => {
+      console.log("📥 Cargando todos los clientes...")
+      return await db.clients.findMany()
     },
   },
 
@@ -179,6 +184,37 @@ export const resolvers = {
         email: newUser.email,
         role: newUser.role,
       }
+    },
+
+    createClient: async (
+      _: unknown,
+      args: {
+        first_name: string
+        last_name: string
+        email?: string
+        phone?: string
+        country?: string
+        type: string
+      }
+    ) => {
+      const { first_name, last_name, email, phone, country, type } = args
+
+      console.log("🆕 Creando nuevo cliente:", first_name, last_name)
+
+      const newClient = await db.clients.create({
+        data: {
+          first_name,
+          last_name,
+          email,
+          phone,
+          country,
+          type,
+        },
+      })
+
+      console.log("✅ Cliente creado correctamente:", newClient.client_id)
+
+      return newClient
     },
   },
 }

@@ -9,7 +9,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- users.prisma ---
 model users {
   user_id       Int       @id @default(autoincrement())
   username      String    @unique @db.VarChar(50)
@@ -22,7 +21,6 @@ model users {
   last_logout   DateTime? @db.Timestamp(6)
 }
 
-// --- clients.prisma ---
 model clients {
   client_id     Int       @id @default(autoincrement())
   first_name    String
@@ -34,8 +32,9 @@ model clients {
   country       String?
   city          String?
   postal_code   String?
+  type          String                            // ✅ Agregado
 
-  company_id    Int?                          // FK opcional
+  company_id    Int?
   company       companies? @relation(fields: [company_id], references: [company_id])
 
   created_at    DateTime? @default(now())
@@ -45,7 +44,6 @@ model clients {
   work_orders   work_orders[]
 }
 
-// --- companies.prisma ---
 model companies {
   company_id     Int       @id @default(autoincrement())
   name           String
@@ -60,11 +58,10 @@ model companies {
   clients        clients[]
   vehicles       vehicles[]
 
-  created_at     DateTime?  @default(now())
-  updated_at     DateTime?  @default(now())
+  created_at     DateTime? @default(now())
+  updated_at     DateTime? @default(now())
 }
 
-// --- vehicles.prisma ---
 model vehicles {
   vehicle_id         Int       @id @default(autoincrement())
   client_id          Int
@@ -93,7 +90,6 @@ model vehicles {
   work_orders        work_orders[]
 }
 
-// --- appointments.prisma ---
 model appointments {
   appointment_id Int       @id @default(autoincrement())
   vehicle_id     Int
@@ -107,7 +103,6 @@ model appointments {
   vehicle        vehicles  @relation(fields: [vehicle_id], references: [vehicle_id])
 }
 
-// --- inspection_templates.prisma ---
 model inspection_templates {
   template_id     Int       @id @default(autoincrement())
   name            String
@@ -119,7 +114,6 @@ model inspection_templates {
   pre_work_orders pre_work_orders[]
 }
 
-// --- pre_work_orders.prisma ---
 model pre_work_orders {
   pre_work_order_id Int       @id @default(autoincrement())
   vehicle_id        Int
@@ -131,11 +125,10 @@ model pre_work_orders {
   created_at        DateTime? @default(now())
   updated_at        DateTime? @default(now())
 
-  vehicle           vehicles   @relation(fields: [vehicle_id], references: [vehicle_id])
+  vehicle           vehicles             @relation(fields: [vehicle_id], references: [vehicle_id])
   template          inspection_templates @relation(fields: [template_id], references: [template_id])
 }
 
-// --- work_orders.prisma ---
 model work_orders {
   work_order_id   Int       @id @default(autoincrement())
   vehicle_id      Int
@@ -155,7 +148,6 @@ model work_orders {
   invoice         invoices? @relation
 }
 
-// --- invoices.prisma ---
 model invoices {
   invoice_id      Int       @id @default(autoincrement())
   work_order_id   Int       @unique

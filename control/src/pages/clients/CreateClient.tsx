@@ -1,6 +1,9 @@
-// src/pages/clients/CreateClient.tsx
+// control/src/pages/clients/CreateClient.tsx
+
 import { useState } from "react"
+import { useMutation } from "@apollo/client"
 import { useNavigate } from "react-router-dom"
+import { CREATE_CLIENT } from "@/graphql/mutations/createClient"
 
 export default function CreateClient() {
   const [firstName, setFirstName] = useState("")
@@ -10,17 +13,29 @@ export default function CreateClient() {
   const [country, setCountry] = useState("")
   const navigate = useNavigate()
 
+  const [createClient] = useMutation(CREATE_CLIENT, {
+    onCompleted: () => {
+      alert("✅ Client created!")
+      navigate("/clients")
+    },
+    onError: (error) => {
+      alert("❌ Error: " + error.message)
+    },
+  })
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Aquí se enviaría a GraphQL
-    console.log("📦 Saving client:", { firstName, lastName, email, phone, country })
-
-    // Simulación
-    setTimeout(() => {
-      alert("Client created!")
-      navigate("/clients")
-    }, 500)
+    createClient({
+      variables: {
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        phone,
+        country,
+        type: "personal", // fijo por ahora
+      },
+    })
   }
 
   return (
@@ -34,6 +49,8 @@ export default function CreateClient() {
           value={firstName}
           onChange={(e) => setFirstName(e.target.value)}
           required
+          title="First name"
+          aria-label="First name"
         />
         <input
           type="text"
@@ -42,6 +59,8 @@ export default function CreateClient() {
           value={lastName}
           onChange={(e) => setLastName(e.target.value)}
           required
+          title="Last name"
+          aria-label="Last name"
         />
         <input
           type="email"
@@ -49,6 +68,8 @@ export default function CreateClient() {
           className="w-full p-2 rounded bg-gray-700 text-white"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          title="Email"
+          aria-label="Email"
         />
         <input
           type="tel"
@@ -56,6 +77,8 @@ export default function CreateClient() {
           className="w-full p-2 rounded bg-gray-700 text-white"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
+          title="Phone"
+          aria-label="Phone"
         />
         <input
           type="text"
@@ -63,10 +86,14 @@ export default function CreateClient() {
           className="w-full p-2 rounded bg-gray-700 text-white"
           value={country}
           onChange={(e) => setCountry(e.target.value)}
+          title="Country"
+          aria-label="Country"
         />
         <button
           type="submit"
           className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+          title="Save client"
+          aria-label="Save client"
         >
           Save Client
         </button>
