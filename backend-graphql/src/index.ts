@@ -1,11 +1,20 @@
-import { createServer } from 'node:http'
-import { createYoga } from 'graphql-yoga'
-import { schema } from './schema'
-import { context } from './context'
+// backend-graphql/src/index.ts
 
-const yoga = createYoga({ schema, context })
+import "dotenv/config" // ✅ Cargar .env antes que nada
+
+import { createServer } from "node:http"
+import { createYoga } from "graphql-yoga"
+import { schema } from "./schema"
+import { context, type Context } from "./context"
+
+// Tipamos Yoga para que use nuestro Context con db
+const yoga = createYoga<Context>({
+  schema,
+  context,
+})
+
 const server = createServer(yoga)
 
-server.listen(4000, '0.0.0.0', () => {
-  console.log('🚀 GraphQL server ready at http://192.168.178.36:4000/graphql')
+server.listen(4000, "0.0.0.0", () => {
+  console.log("🚀 GraphQL server ready at http://192.168.178.36:4000/graphql")
 })

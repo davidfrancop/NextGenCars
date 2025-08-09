@@ -1,102 +1,104 @@
-// control/src/pages/clients/CreateClient.tsx
-
-import { useState } from "react"
-import { useMutation } from "@apollo/client"
+// src/pages/clients/CreateClient.tsx
 import { useNavigate } from "react-router-dom"
+import { useMutation } from "@apollo/client"
+import { useState } from "react"
 import { CREATE_CLIENT } from "@/graphql/mutations/createClient"
 
 export default function CreateClient() {
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
-  const [email, setEmail] = useState("")
-  const [phone, setPhone] = useState("")
-  const [country, setCountry] = useState("")
   const navigate = useNavigate()
+  const [form, setForm] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    country: "",
+    type: "personal",
+  })
 
-  const [createClient] = useMutation(CREATE_CLIENT, {
+  const [createClient, { loading, error }] = useMutation(CREATE_CLIENT, {
     onCompleted: () => {
       alert("✅ Client created!")
       navigate("/clients")
     },
-    onError: (error) => {
-      alert("❌ Error: " + error.message)
-    },
   })
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setForm((prev) => ({ ...prev, [name]: value }))
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-
-    createClient({
-      variables: {
-        first_name: firstName,
-        last_name: lastName,
-        email,
-        phone,
-        country,
-        type: "personal", // fijo por ahora
-      },
-    })
+    createClient({ variables: { ...form } })
   }
 
   return (
     <div className="max-w-xl mx-auto bg-gray-800 p-6 rounded shadow">
-      <h2 className="text-2xl font-bold mb-4">New Client</h2>
+      <h2 className="text-2xl font-bold mb-4">Create Client</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
-          type="text"
-          placeholder="First name"
+          name="first_name"
+          value={form.first_name}
+          onChange={handleChange}
+          placeholder="First Name"
+          aria-label="First Name"
           className="w-full p-2 rounded bg-gray-700 text-white"
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
           required
-          title="First name"
-          aria-label="First name"
         />
         <input
-          type="text"
-          placeholder="Last name"
+          name="last_name"
+          value={form.last_name}
+          onChange={handleChange}
+          placeholder="Last Name"
+          aria-label="Last Name"
           className="w-full p-2 rounded bg-gray-700 text-white"
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
           required
-          title="Last name"
-          aria-label="Last name"
         />
         <input
+          name="email"
           type="email"
+          value={form.email}
+          onChange={handleChange}
           placeholder="Email"
-          className="w-full p-2 rounded bg-gray-700 text-white"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          title="Email"
           aria-label="Email"
+          className="w-full p-2 rounded bg-gray-700 text-white"
         />
         <input
-          type="tel"
+          name="phone"
+          value={form.phone}
+          onChange={handleChange}
           placeholder="Phone"
-          className="w-full p-2 rounded bg-gray-700 text-white"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          title="Phone"
           aria-label="Phone"
+          className="w-full p-2 rounded bg-gray-700 text-white"
         />
         <input
-          type="text"
+          name="country"
+          value={form.country}
+          onChange={handleChange}
           placeholder="Country"
-          className="w-full p-2 rounded bg-gray-700 text-white"
-          value={country}
-          onChange={(e) => setCountry(e.target.value)}
-          title="Country"
           aria-label="Country"
+          className="w-full p-2 rounded bg-gray-700 text-white"
         />
+        <select
+          name="type"
+          value={form.type}
+          onChange={handleChange}
+          aria-label="Client Type"
+          className="w-full p-2 rounded bg-gray-700 text-white"
+        >
+          <option value="personal">Personal</option>
+          <option value="company">Company</option>
+        </select>
+
         <button
           type="submit"
           className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-          title="Save client"
-          aria-label="Save client"
+          disabled={loading}
         >
-          Save Client
+          {loading ? "Creating..." : "Create Client"}
         </button>
+
+        {error && <p className="text-red-500 mt-2">{error.message}</p>}
       </form>
     </div>
   )

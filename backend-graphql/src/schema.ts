@@ -1,11 +1,10 @@
 // backend-graphql/src/schema.ts
-
 import { createSchema } from "graphql-yoga"
 import { resolvers } from "./resolvers"
+import type { Context } from "./context"
 
-export const schema = createSchema({
+export const schema = createSchema<Context>({
   typeDefs: /* GraphQL */ `
-
     type User {
       user_id: Int!
       username: String!
@@ -21,21 +20,26 @@ export const schema = createSchema({
       email: String
       phone: String
       country: String
-      type: String!
+      type: String
+      created_at: String
     }
 
     type Vehicle {
       vehicle_id: Int!
+      client_id: Int!
       make: String!
       model: String!
       year: Int!
       license_plate: String!
       vin: String!
-      client: Client
-    }
-
-    type LoginResponse {
-      token: String!
+      created_at: String
+      hsn: String
+      tsn: String
+      fuel_type: String
+      drive: String
+      transmission: String
+      km: Int
+      client: Client # ✅ relación con Client
     }
 
     type DashboardStats {
@@ -59,22 +63,31 @@ export const schema = createSchema({
       count: Int!
     }
 
+    type LoginResponse {
+      token: String!
+    }
+
     type Query {
       hello: String!
       users: [User!]!
-
       dashboardStats: DashboardStats!
       recentWorkOrders: [WorkOrderPreview!]!
       appointmentsThisWeek: [AppointmentsPerDay!]!
 
+      # Clients
       personalClients: [Client!]!
-      clients: [Client!]!         # ✅ nueva query global de clientes
+      clients: [Client!]!
+      client(client_id: Int!): Client
+
+      # Vehicles
       vehicles: [Vehicle!]!
     }
 
     type Mutation {
+      # Auth
       loginUser(email: String!, password: String!): LoginResponse!
 
+      # Users
       createUser(
         username: String!
         email: String!
@@ -82,18 +95,8 @@ export const schema = createSchema({
         role: String!
       ): User!
 
-      createVehicle(
-        client_id: Int!
-        make: String!
-        model: String!
-        year: Int!
-        license_plate: String!
-        vin: String!
-      ): Vehicle!
-
-      deleteVehicle(vehicleId: Int!): Boolean!
-
-      createClient(                 # ✅ nueva mutación
+      # Clients
+      createClient(
         first_name: String!
         last_name: String!
         email: String
@@ -101,6 +104,36 @@ export const schema = createSchema({
         country: String
         type: String!
       ): Client!
+
+      updateClient(
+        client_id: Int!
+        first_name: String
+        last_name: String
+        email: String
+        phone: String
+        country: String
+        type: String
+      ): Client!
+
+      deleteClient(clientId: Int!): Boolean!
+
+      # Vehicles
+      createVehicle(
+        client_id: Int!
+        make: String!
+        model: String!
+        year: Int!
+        license_plate: String!
+        vin: String!
+        hsn: String
+        tsn: String
+        fuel_type: String
+        drive: String
+        transmission: String
+        km: Int
+      ): Vehicle!
+
+      deleteVehicle(vehicleId: Int!): Boolean!
     }
   `,
   resolvers,
