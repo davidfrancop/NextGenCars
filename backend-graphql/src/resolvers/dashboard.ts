@@ -1,74 +1,49 @@
-// backend-graphql/src/resolvers/dashboard.ts
-
-import { prisma } from "../../db"
-import { eachDayOfInterval, startOfWeek, endOfWeek, format } from "date-fns"
+import { eachDayOfInterval, startOfWeek, endOfWeek, format } from "date-fns";
+import { Context } from "../context";
 
 export const dashboardResolvers = {
   Query: {
-    dashboardStats: async (_: any, __: any, { prisma }) => {
-      const [vehicles, workOrders, clients, revenueResult] = await Promise.all([
-        prisma.vehicle.count(),
-        prisma.workOrder.count(),
-        prisma.client.count(),
-        prisma.workOrder.aggregate({
-          _sum: { total: true },
-        }),
-      ])
-
+    dashboardStats: async (_: unknown, __: unknown, { db }: Context) => {
+      const [vehicles, workOrders, clients, revenueAgg] = await Promise.all([
+        db.vehicles.count(),
+        db.work_orders.count(),
+        db.clients.count(),
+        db.work_orders.aggregate({ _sum: { total_cost: true } }),
+      ]);
       return {
         vehicles,
         workOrders,
         clients,
-        revenue: revenueResult._sum.total ?? 0,
-      }
+        revenue: revenueAgg._sum.total_cost ?? 0,
+      };
     },
-
-    recentWorkOrders: async (_: any, __: any, { prisma }) => {
-      const orders = await prisma.workOrder.findMany({
-        orderBy: { createdAt: "desc" },
+    recentWorkOrders: async (_: unknown, __: unknown, { db }: Context) => {
+      const items = await db.work_orders.findMany({
         take: 5,
-        include: {
-          client: true,
-          vehicle: true,
-        },
-      })
-
-      return orders.map((order) => ({
-        id: order.id.toString(),
-        clientName: `${order.client.firstName} ${order.client.lastName}`,
-        vehicleName: `${order.vehicle.make} ${order.vehicle.model}`,
-        vehiclePlate: order.vehicle.plate,
-        createdAt: order.createdAt.toISOString(),
-        status: order.status,
-      }))
+        orderBy: { created_at: "desc" },
+        include: { vehicle: true, client: true },
+      });
+      return items.map(w => ({
+        id: String(w.work_order_id),
+        clientName: `${w.client.first_name} ${w.client.last_name}`,
+        vehicleName: `${w.vehicle.make} ${w.vehicle.model}`,
+        vehiclePlate: w.vehicle.license_plate,
+        createdAt: w.created_at?.toISOString() ?? "",
+        status: w.status,
+      }));
     },
-
-    appointmentsThisWeek: async () => {
-      const start = startOfWeek(new Date(), { weekStartsOn: 1 }) // Monday
-      const end = endOfWeek(new Date(), { weekStartsOn: 1 })     // Sunday
-
-      const appointments = await prisma.appointment.findMany({
-        where: {
-          date: {
-            gte: start,
-            lte: end,
-          },
-        },
-      })
-
-      const weekDays = eachDayOfInterval({ start, end })
-
-      const result = weekDays.map((day) => {
-        const label = format(day, "EEE") // 'Mon', 'Tue', etc.
-        const count = appointments.filter(
-          (a) => format(new Date(a.date), "EEE") === label
-        ).length
-
-        return { day: label, count }
-      })
-
-      return result
+    appointmentsThisWeek: async (_: unknown, __: unknown, { db }: Context) => {
+      const start = startOfWeek(new Date(), { weekStartsOn: 1 });
+      const end = endOfWeek(new Date(), { weekStartsOn: 1 });
+      const weekDays = eachDayOfInterval({ start, end });
+      const appointments = await db.appointments.findMany({
+        where: { date: { gte: start, lte: end } },
+      });
+      return weekDays.map(day => {
+        const label = format(day, "EEE");
+        const count = appointments.filter(a => format(a.date, "EEE") === label).length;
+        return { day: label, count };
+      });
     },
   },
-}
-
+};
