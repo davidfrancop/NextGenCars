@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "@apollo/client"
 import { CREATE_VEHICLE } from "@/graphql/mutations/createVehicle"
 import { GET_PERSONAL_CLIENTS } from "@/graphql/queries/getPersonalClients"
+import { GET_VEHICLES } from "@/graphql/queries/getVehicles" // 🔹 para refetch automático
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 
@@ -37,6 +38,8 @@ export default function CreateVehicle() {
           client_id: parseInt(formData.client_id),
           year: parseInt(formData.year),
         },
+        // 🔹 Esto actualiza la lista en Vehicles.tsx al volver
+        refetchQueries: [{ query: GET_VEHICLES }],
       })
       navigate("/vehicles")
     } catch (err) {

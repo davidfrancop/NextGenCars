@@ -1,8 +1,10 @@
 // src/pages/clients/CreateClient.tsx
+
 import { useNavigate } from "react-router-dom"
 import { useMutation } from "@apollo/client"
 import { useState } from "react"
 import { CREATE_CLIENT } from "@/graphql/mutations/createClient"
+import { GET_CLIENTS } from "@/graphql/queries/getClients" // 🔹 query de todos los clientes
 
 export default function CreateClient() {
   const navigate = useNavigate()
@@ -16,13 +18,18 @@ export default function CreateClient() {
   })
 
   const [createClient, { loading, error }] = useMutation(CREATE_CLIENT, {
+    // 🔹 Refresca la lista de clientes al volver a /clients
+    refetchQueries: [{ query: GET_CLIENTS }],
+    awaitRefetchQueries: true, // asegura que termine el refetch antes de navegar
     onCompleted: () => {
       alert("✅ Client created!")
       navigate("/clients")
     },
   })
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target
     setForm((prev) => ({ ...prev, [name]: value }))
   }

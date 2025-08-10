@@ -6,11 +6,13 @@
 ✅ Completado – falta test con roles no-admin.
 
 ### 5C.9 – 🔐 Protección de rutas según rol
-⏳ Pendiente
-- Implementar `RoleGuard`.
-- Integrar en `PrivateRoute` o wrapper.
-- Probar acceso con `admin`, `mechanic`, `frontdesk`.
-- Redirección o mensaje en acceso no autorizado.
+✅ Completado
+- Implementado `RoleProtectedRoute` como RoleGuard.
+- Integrado en todas las rutas protegidas (`main.tsx`).
+- Pruebas de acceso con `admin`, `mechanic`, `frontdesk` realizadas.
+- Redirección automática a `/unauthorized` en caso de acceso no autorizado.
+- Página `Unauthorized.tsx` creada y estilizada para mostrar roles requeridos.
+- `/dashboard` redirige automáticamente al dashboard del rol actual.
 
 ### 5C.10 – Sidebar dinámico por rol
 ✅ Completado.

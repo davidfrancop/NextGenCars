@@ -10,6 +10,7 @@ import "./index.css"
 
 // Páginas
 import Login from "./pages/Login"
+import Unauthorized from "./pages/Unauthorized"
 import AdminDashboard from "./pages/dashboards/AdminDashboard"
 import FrontdeskDashboard from "./pages/dashboards/FrontdeskDashboard"
 import MechanicDashboard from "./pages/dashboards/MechanicDashboard"
@@ -32,6 +33,7 @@ import EditVehicle from "./pages/vehicles/EditVehicle"
 // Layout y protección
 import Layout from "./components/Layout"
 import RoleProtectedRoute from "./components/RoleProtectedRoute"
+import RoleRedirect from "./components/RoleRedirect"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -39,8 +41,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Login público */}
+            {/* Rutas públicas */}
             <Route path="/login" element={<Login />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
 
             {/* Dashboard por rol */}
             <Route
@@ -51,6 +54,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                 </RoleProtectedRoute>
               }
             >
+              {/* Redirección automática según rol */}
+              <Route index element={<RoleRedirect />} />
               <Route path="admin" element={<AdminDashboard />} />
               <Route path="frontdesk" element={<FrontdeskDashboard />} />
               <Route path="mechanic" element={<MechanicDashboard />} />
@@ -84,7 +89,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               <Route path="edit/:clientId" element={<EditClient />} />
             </Route>
 
-            {/* ✅ Gestión de vehículos (admin y frontdesk) */}
+            {/* Gestión de vehículos (admin y frontdesk) */}
             <Route
               path="/vehicles"
               element={

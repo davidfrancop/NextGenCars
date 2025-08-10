@@ -44,12 +44,12 @@
 
 ### Roles y rutas
 - [x] Redirección por rol en login
-- [ ] RoleGuard/PrivateRoute implementados
-  - [ ] Implementar `RoleGuard` para restringir rutas según rol
-  - [ ] Integrar `RoleGuard` en `PrivateRoute` o wrapper equivalente
-  - [ ] Probar acceso con todos los roles (admin, mechanic, frontdesk)
-  - [ ] Mostrar mensaje o redirección en acceso no autorizado
-- [ ] Proteger rutas según rol
+- [x] RoleGuard/PrivateRoute implementados
+  - [x] Implementar `RoleProtectedRoute` (RoleGuard) para restringir rutas según rol
+  - [x] Integrar `RoleProtectedRoute` en todas las rutas protegidas (`main.tsx`)
+  - [x] Probar acceso con todos los roles (admin, mechanic, frontdesk)
+  - [x] Mostrar mensaje o redirección en acceso no autorizado (`Unauthorized.tsx`)
+- [x] Proteger rutas según rol
 - [x] Sidebar dinámico por rol
 
 ### Usuarios

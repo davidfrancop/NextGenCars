@@ -2,42 +2,105 @@
 
 const TOKEN_KEY = "nextgencars_token"
 
-// Guarda el token JWT en localStorage
+// ===== Tipos =====
+export type JWTPayload = {
+  sub?: string
+  email?: string
+  role?: string
+  exp?: number // segundos desde epoch
+  iat?: number
+  [k: string]: unknown
+}
+
+// ===== Helpers de almacenamiento =====
 export function saveToken(token: string) {
   localStorage.setItem(TOKEN_KEY, token)
 }
 
-// Recupera el token JWT desde localStorage
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
 }
 
-// Elimina el token del localStorage
 export function removeToken() {
   localStorage.removeItem(TOKEN_KEY)
 }
 
-// Decodifica el token completo y devuelve el payload
-export function parseToken(token: string): any | null {
+// ===== Base64URL decode seguro =====
+function base64UrlDecode(input: string): string {
   try {
-    const payloadBase64 = token.split(".")[1]
-    const decodedPayload = atob(payloadBase64)
-    return JSON.parse(decodedPayload)
+    // JWT usa base64url ( - _ ) y sin padding
+    const base64 = input.replace(/-/g, "+").replace(/_/g, "/")
+    const padded = base64 + "===".slice((base64.length + 3) % 4)
+    // atob puede fallar si hay caracteres inválidos
+    return typeof atob === "function" ? atob(padded) : Buffer.from(padded, "base64").toString("binary")
+  } catch {
+    return ""
+  }
+}
+
+// ===== Parseo/lectura de payload =====
+export function parseToken(token: string): JWTPayload | null {
+  try {
+    const [, payloadB64] = token.split(".")
+    if (!payloadB64) return null
+    const json = base64UrlDecode(payloadB64)
+    return JSON.parse(json) as JWTPayload
   } catch (e) {
     console.error("❌ Error parsing token:", e)
     return null
   }
 }
 
-// Extrae el rol del usuario desde un token dado
 export function getRoleFromToken(token: string): string | null {
   const payload = parseToken(token)
-  return payload?.role?.toLowerCase() || null
+  return payload?.role ? String(payload.role).toLowerCase() : null
 }
 
-// ✅ Obtiene el rol actual directamente desde localStorage
 export function getCurrentUserRole(): string | null {
   const token = getToken()
-  if (!token) return null
-  return getRoleFromToken(token)
+  return token ? getRoleFromToken(token) : null
+}
+
+export function getUserEmail(): string | null {
+  const token = getToken()
+  const p = token ? parseToken(token) : null
+  return (p?.email as string) ?? null
+}
+
+export function getUserId(): string | null {
+  const token = getToken()
+  const p = token ? parseToken(token) : null
+  return (p?.sub as string) ?? null
+}
+
+// ===== Estado/validación =====
+export function isTokenExpired(token: string): boolean {
+  const payload = parseToken(token)
+  if (!payload?.exp) return false // si no hay exp, no marcamos expirado (ajústalo si quieres forzar exp)
+  const nowSec = Math.floor(Date.now() / 1000)
+  return payload.exp <= nowSec
+}
+
+export function isAuthenticated(): boolean {
+  const token = getToken()
+  if (!token) return false
+  return !isTokenExpired(token)
+}
+
+export function hasRole(allowed: string[] = []): boolean {
+  if (!allowed.length) return isAuthenticated()
+  const token = getToken()
+  if (!token || isTokenExpired(token)) return false
+  const role = getRoleFromToken(token)
+  return role ? allowed.map(r => r.toLowerCase()).includes(role) : false
+}
+
+// ===== Utilidad opcional para logout forzado =====
+export function ensureAuthOrLogout(): boolean {
+  const token = getToken()
+  if (!token || isTokenExpired(token)) {
+    removeToken()
+    return false
+  }
+  return true
 }

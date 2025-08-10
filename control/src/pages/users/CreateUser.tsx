@@ -2,6 +2,7 @@
 
 import { useMutation } from "@apollo/client"
 import { CREATE_USER } from "@/graphql/mutations/createUser"
+import { GET_USERS } from "@/graphql/queries/getUsers" // 🔹 para refetch
 import { useNavigate } from "react-router-dom"
 import { useState } from "react"
 
@@ -40,7 +41,10 @@ export default function CreateUser() {
           password: formData.password,
           role: formData.role,
         },
+        // 🔹 Esto refresca la lista en Users.tsx
+        refetchQueries: [{ query: GET_USERS }],
       })
+
       navigate("/users")
     } catch (err) {
       console.error("Error creating user:", err)
