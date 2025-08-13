@@ -6,16 +6,10 @@
 ✅ Completado – falta test con roles no-admin.
 
 ### 5C.9 – 🔐 Protección de rutas según rol
-✅ Completado
-- Implementado `RoleProtectedRoute` como RoleGuard.
-- Integrado en todas las rutas protegidas (`main.tsx`).
-- Pruebas de acceso con `admin`, `mechanic`, `frontdesk` realizadas.
-- Redirección automática a `/unauthorized` en caso de acceso no autorizado.
-- Página `Unauthorized.tsx` creada y estilizada para mostrar roles requeridos.
-- `/dashboard` redirige automáticamente al dashboard del rol actual.
+✅ Completado.
 
 ### 5C.10 – Sidebar dinámico por rol
-✅ Completado.
+✅ Completado al 100% – ahora oculta enlaces según el rol.
 
 ### 5C.11 – Gestión de usuarios (CRUD completo)
 ⏳ Pendiente:
@@ -29,11 +23,9 @@
 - DB: Campo `type` (PERSONAL | COMPANY) + campos extra (`company_name`, `vat_number`, etc.).
 - Validaciones por tipo (campos obligatorios).
 - Migración de datos existentes.
-- **Flujo creación**:
-  - Botón “New Client” abre selector tipo (`PERSONAL` | `COMPANY`).
-  - Redirige a `CreateClient.tsx` o `CreateCompany.tsx` según elección.
-- Formulario Create/Edit separados para cada tipo.
-- Sidebar → “Clients” único (lista global con filtro tipo select).
+- Formulario Create/Edit para personal y empresa.
+- Sidebar con submenú Clients → All / Personal / Company.
+- Filtros y UI adaptada según tipo.
 - Toasts y validaciones.
 
 ### 5C.13 – Gestión de vehículos

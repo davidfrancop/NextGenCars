@@ -1,52 +1,86 @@
 // src/components/Sidebar.tsx
 
-import { NavLink, useNavigate } from "react-router-dom"
-import { useAuth } from "@/auth/AuthProvider"
-import { menuItems } from "@/config/menuItems"
-import { LogOut } from "lucide-react"
+import { useState, useMemo } from "react"
+import {
+  Home,
+  Users,
+  Car,
+  Calendar,
+  ClipboardList,
+  FileText,
+  Wrench,
+  Settings,
+  LogOut,
+  Menu,
+  X
+} from "lucide-react"
+import { Link, useNavigate, useLocation } from "react-router-dom"
+import { getCurrentUserRole } from "@/utils/token"
 
 export default function Sidebar() {
-  const { user, logout } = useAuth()
-  const role = (user?.role || "").toLowerCase()
+  const [isOpen, setIsOpen] = useState(false)
   const navigate = useNavigate()
-
-  const visible = menuItems.filter(i => i.roles.includes(role as any))
+  const location = useLocation()
+  const role = useMemo(() => getCurrentUserRole(), [])
 
   const handleLogout = () => {
-    logout()
-    navigate("/login", { replace: true })
+    localStorage.removeItem("nextgencars_token")
+    navigate("/login")
   }
 
-  return (
-    <aside className="w-64 bg-gray-900 border-r border-gray-800">
-      <nav className="p-3 space-y-1">
-        {visible.map(item => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              `flex items-center gap-2 px-3 py-2 rounded-md transition
-               ${isActive ? "bg-gray-800 text-white" : "text-gray-300 hover:bg-gray-800"}`
-            }
-          >
-            {item.icon ? <item.icon size={18} className="shrink-0" /> : null}
-            <span>{item.label}</span>
-          </NavLink>
-        ))}
+  const menuItems = [
+    { to: "/dashboard/admin", label: "Dashboard", icon: <Home size={20} />, roles: ["admin"] },
+    { to: "/dashboard/frontdesk", label: "Dashboard", icon: <Home size={20} />, roles: ["frontdesk"] },
+    { to: "/dashboard/mechanic", label: "Dashboard", icon: <Home size={20} />, roles: ["mechanic"] },
+    { to: "/clients", label: "Clients", icon: <Users size={20} />, roles: ["admin", "frontdesk"] },
+    { to: "/vehicles", label: "Vehicles", icon: <Car size={20} />, roles: ["admin", "frontdesk"] },
+    { to: "/appointments", label: "Appointments", icon: <Calendar size={20} />, roles: ["admin", "frontdesk", "mechanic"] },
+    { to: "/workorders", label: "Work Orders", icon: <ClipboardList size={20} />, roles: ["admin", "frontdesk", "mechanic"] },
+    { to: "/invoices", label: "Invoices", icon: <FileText size={20} />, roles: ["admin", "frontdesk"] },
+    { to: "/inspections", label: "Inspections", icon: <Wrench size={20} />, roles: ["admin", "mechanic"] },
+    { to: "/settings", label: "Settings", icon: <Settings size={20} />, roles: ["admin"] },
+  ]
 
-        {/* --- Logout al final --- */}
-        <div className="mt-4 border-t border-gray-800 pt-3">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-gray-300 hover:bg-gray-800"
-            aria-label="Logout"
-            title="Logout"
-          >
-            <LogOut size={18} className="shrink-0" />
-            <span>Logout</span>
-          </button>
-        </div>
+  return (
+    <aside
+      className={`bg-gray-900 text-white h-screen transition-all ${isOpen ? "w-64" : "w-20"} fixed md:relative`}
+    >
+      {/* Botón de menú móvil */}
+      <div className="flex items-center justify-between p-4 md:hidden">
+        <span className="text-lg font-bold">NGC</span>
+        <button onClick={() => setIsOpen(!isOpen)}>
+          {isOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      </div>
+
+      {/* Menú */}
+      <nav className="mt-4">
+        {menuItems
+          .filter((item) => item.roles.includes(role || ""))
+          .map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`flex items-center gap-3 px-4 py-2 hover:bg-gray-700 transition ${
+                location.pathname.startsWith(item.to) ? "bg-gray-700" : ""
+              }`}
+            >
+              {item.icon}
+              {isOpen && <span>{item.label}</span>}
+            </Link>
+          ))}
       </nav>
+
+      {/* Logout */}
+      <div className="absolute bottom-4 w-full">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-4 py-2 w-full text-left hover:bg-red-700 transition"
+        >
+          <LogOut size={20} />
+          {isOpen && <span>Logout</span>}
+        </button>
+      </div>
     </aside>
   )
 }

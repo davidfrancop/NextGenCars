@@ -45,10 +45,10 @@
 ### Roles y rutas
 - [x] Redirección por rol en login
 - [x] RoleGuard/PrivateRoute implementados
-  - [x] Implementar `RoleProtectedRoute` (RoleGuard) para restringir rutas según rol
-  - [x] Integrar `RoleProtectedRoute` en todas las rutas protegidas (`main.tsx`)
+  - [x] Implementar `RoleGuard` para restringir rutas según rol
+  - [x] Integrar `RoleGuard` en `PrivateRoute` o wrapper equivalente
   - [x] Probar acceso con todos los roles (admin, mechanic, frontdesk)
-  - [x] Mostrar mensaje o redirección en acceso no autorizado (`Unauthorized.tsx`)
+  - [x] Mostrar mensaje o redirección en acceso no autorizado
 - [x] Proteger rutas según rol
 - [x] Sidebar dinámico por rol
 
@@ -78,15 +78,14 @@
   - [ ] Ajustar mutaciones `createClient`/`updateClient` para campos condicionales
   - [ ] QA: probar creación/edición/listado por tipo
 - [ ] Navegación – Sidebar
-  - [x] Mantener botón “Clients” único con vista global
-  - [x] Añadir filtro tipo select (All / Personal / Company)
-  - [x] Botón “New Client” con selector tipo (`PERSONAL` o `COMPANY`)
-  - [ ] Redirigir a `CreateClient.tsx` o `CreateCompany.tsx` según selección
+  - [ ] Submenú Clients → All / Personal / Company
+  - [ ] Filtrar listados según `type` desde URL y UI
+  - [ ] Botón “Add client” con selector de tipo
 - [ ] Formularios
-  - [x] CreateClient (PERSONAL)
-  - [x] EditClient (PERSONAL)
-  - [ ] CreateCompany (COMPANY)
-  - [ ] EditCompany (COMPANY)
+  - [ ] Create/Edit PersonalClient (campos persona)
+  - [ ] Create/Edit CompanyClient (campos empresa)
+  - [ ] Mantener datos al cambiar tipo
+  - [ ] Toasts y validaciones diferenciadas por tipo
 - [x] CreateClient
 - [x] EditClient
 - [x] DeleteClient
