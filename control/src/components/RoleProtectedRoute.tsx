@@ -1,25 +1,25 @@
 // control/src/components/RoleProtectedRoute.tsx
 
-import { ReactNode } from "react"
-import { Navigate, useLocation } from "react-router-dom"
+import { Navigate, Outlet, useLocation } from "react-router-dom"
 import { useAuth } from "@/auth/AuthProvider"
 
-type Props = {
-  children: ReactNode
-  allowedRoles: string[]
-}
+type Props = { allowedRoles: string[] }
 
-export default function RoleProtectedRoute({ children, allowedRoles }: Props) {
+export default function RoleProtectedRoute({ allowedRoles }: Props) {
   const { user } = useAuth()
   const location = useLocation()
 
-  // 🔹 No autenticado → redirige al login y recuerda a dónde iba
+  // No autenticado → login
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location }} />
   }
 
-  // 🔹 Rol no permitido → redirige a /unauthorized con info de roles requeridos
-  if (!allowedRoles.includes(user.role)) {
+  // Normaliza role a minúsculas
+  const role = (user.role || "").toLowerCase()
+  const ok = allowedRoles.map(r => r.toLowerCase()).includes(role)
+
+  // Rol no permitido → unauthorized
+  if (!ok) {
     return (
       <Navigate
         to="/unauthorized"
@@ -29,7 +29,6 @@ export default function RoleProtectedRoute({ children, allowedRoles }: Props) {
     )
   }
 
-  // 🔹 Autenticado y con rol válido → muestra la ruta
-  return <>{children}</>
+  // OK → renderiza las rutas hijas
+  return <Outlet />
 }
-
