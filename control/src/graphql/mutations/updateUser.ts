@@ -1,16 +1,17 @@
 // src/graphql/mutations/updateUser.ts
+
 import { gql } from "@apollo/client"
 
 export const UPDATE_USER = gql`
   mutation UpdateUser(
-    $userId: Int!
+    $user_id: Int!
     $username: String!
     $email: String!
     $role: String!
     $password: String
   ) {
     updateUser(
-      userId: $userId
+      user_id: $user_id
       username: $username
       email: $email
       role: $role

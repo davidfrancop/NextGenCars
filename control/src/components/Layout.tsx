@@ -1,31 +1,21 @@
 // src/components/Layout.tsx
 
-import { Outlet, Navigate } from "react-router-dom"
+import { ReactNode } from "react"
 import Sidebar from "./Sidebar"
-import { useAuth } from "@/auth/AuthProvider"
 
-export default function Layout() {
-  const { isAuthenticated, loading } = useAuth()
+type Props = { children?: ReactNode }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900 text-gray-400">
-        Checking session...
-      </div>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
-  }
-
+export default function Layout({ children }: Props) {
   return (
-    <div className="flex bg-gray-900 text-white min-h-screen">
-      <Sidebar />
-      <main className="flex-1 p-6 pt-16 md:pt-6">
-        <Outlet />
-      </main>
+    <div className="bg-gray-900 text-white min-h-screen">
+      <div className="flex">
+        {/* El Sidebar estático en desktop ocupa su ancho; en móvil es overlay */}
+        <Sidebar />
+        {/* Contenido: ocupa todo el resto, con padding cómodo */}
+        <main className="flex-1 p-6">
+          {children}
+        </main>
+      </div>
     </div>
   )
 }
-

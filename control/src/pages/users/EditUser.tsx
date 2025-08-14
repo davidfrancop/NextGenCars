@@ -1,155 +1,229 @@
 // src/pages/users/EditUser.tsx
 
-import { useQuery, useMutation } from "@apollo/client"
-import { GET_USERS } from "@/graphql/queries/getUsers"
-import { UPDATE_USER } from "@/graphql/mutations/updateUser"
-import { useParams, useNavigate } from "react-router-dom"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useNavigate, useParams } from "react-router-dom"
+import { gql, useMutation, useQuery } from "@apollo/client"
 
-interface FormData {
-  username: string
-  email: string
-  role: string
-  password: string
-}
+// 🔎 Query por ID (ajusta el nombre del field si tu backend usa otro, p.ej. `getUser` o `userById`)
+const GET_USER = gql`
+  query GetUser($user_id: Int!) {
+    user(user_id: $user_id) {
+      user_id
+      username
+      email
+      role
+    }
+  }
+`
+
+// ✍️ Update con snake_case + password opcional
+const UPDATE_USER = gql`
+  mutation UpdateUser(
+    $user_id: Int!
+    $username: String!
+    $email: String!
+    $role: String!
+    $password: String
+  ) {
+    updateUser(
+      user_id: $user_id
+      username: $username
+      email: $email
+      role: $role
+      password: $password
+    ) {
+      user_id
+      username
+      email
+      role
+    }
+  }
+`
+
+const roles = ["admin", "frontdesk", "mechanic"] as const
+type Role = typeof roles[number]
 
 export default function EditUser() {
   const { userId } = useParams<{ userId: string }>()
+  const uid = useMemo(() => Number(userId), [userId])
   const navigate = useNavigate()
-  const [formData, setFormData] = useState<FormData>({
-    username: "",
-    email: "",
-    role: "",
-    password: "",
+
+  // ▶️ Query por ID con skip si uid inválido
+  const {
+    data,
+    loading: qLoading,
+    error: qError,
+  } = useQuery(GET_USER, {
+    variables: { user_id: uid },
+    skip: !uid,
+    fetchPolicy: "cache-and-network",
   })
 
-  const { data, loading, error } = useQuery(GET_USERS)
-  const [updateUser] = useMutation(UPDATE_USER)
+  const [form, setForm] = useState({
+    username: "",
+    email: "",
+    role: "frontdesk" as Role,
+    password: "", // opcional
+  })
+  const [errors, setErrors] = useState<{ email?: string; username?: string }>({})
+  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null)
 
-  useEffect(() => {
-    if (data?.users && userId) {
-      const user = data.users.find((u: any) => u.user_id === parseInt(userId))
-      if (user) {
-        setFormData({
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          password: "",
-        })
+  const [updateUser, { loading: mLoading }] = useMutation(UPDATE_USER, {
+    onCompleted: () => {
+      setToast({ type: "success", msg: "Usuario actualizado" })
+      setTimeout(() => navigate("/users", { replace: true }), 700)
+    },
+    onError: (err) => {
+      const msg = err.message || "Fallo al actualizar"
+      if (/unique|duplicate|already exists/i.test(msg)) {
+        setErrors((e) => ({ ...e, email: "Email ya está en uso" }))
       }
-    }
-  }, [data, userId])
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!userId) return
-
-    try {
-      await updateUser({
-        variables: {
-          userId: parseInt(userId),
-          username: formData.username,
-          email: formData.email,
-          role: formData.role,
-          password: formData.password || null,
+      setToast({ type: "error", msg })
+    },
+    // 🧠 Opcional: actualiza cache para listas
+    update(cache, { data }) {
+      const updated = data?.updateUser
+      if (!updated) return
+      cache.modify({
+        fields: {
+          users(existingRefs: any[] = [], { readField }) {
+            return existingRefs.map((ref) =>
+              readField("user_id", ref) === updated.user_id ? { ...ref, ...updated } : ref
+            )
+          },
         },
       })
-      navigate("/users")
-    } catch (err) {
-      console.error("Error updating user:", err)
+    },
+  })
+
+  // ⬇️ Carga datos al formulario cuando llega la query
+  useEffect(() => {
+    if (!qLoading && data?.user && uid) {
+      const u = data.user
+      setForm({
+        username: u.username ?? "",
+        email: u.email ?? "",
+        role: (u.role || "frontdesk") as Role,
+        password: "",
+      })
     }
+  }, [qLoading, data, uid])
+
+  const validate = () => {
+    const e: typeof errors = {}
+    if (!form.username.trim()) e.username = "Obligatorio"
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = "Email no válido"
+    setErrors(e)
+    return Object.keys(e).length === 0
   }
 
-  if (loading) return <p className="text-center text-gray-400">Loading user...</p>
-  if (error) return <p className="text-center text-red-500">Error loading user.</p>
+  const onSubmit = async (ev: React.FormEvent) => {
+    ev.preventDefault()
+    if (!validate()) return
+
+    await updateUser({
+      variables: {
+        user_id: uid, // 👈 snake_case
+        username: form.username.trim(),
+        email: form.email.trim(),
+        role: form.role,
+        password: form.password ? form.password : undefined, // opcional
+      },
+    })
+  }
+
+  if (!uid) {
+    return <div className="p-6 text-red-400">ID de usuario inválido.</div>
+  }
+
+  if (qError) {
+    return <div className="p-6 text-red-400">Error cargando usuario: {qError.message}</div>
+  }
 
   return (
-    <div className="p-6 text-white max-w-xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">Edit User</h2>
+    <div className="p-6 text-white">
+      <h1 className="text-2xl font-bold mb-4">Editar usuario</h1>
 
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-4 bg-gray-800 p-6 rounded-lg shadow"
-      >
+      <form onSubmit={onSubmit} className="space-y-4 max-w-lg">
         <div>
-          <label htmlFor="username" className="block text-sm mb-1 text-gray-300">
-            Username
-          </label>
+          <label className="block mb-1 text-sm text-gray-300">Username</label>
           <input
-            type="text"
-            id="username"
-            name="username"
-            placeholder="Username"
-            value={formData.username}
-            onChange={handleChange}
-            className="w-full px-4 py-2 rounded bg-gray-900 border border-gray-600"
+            className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={form.username}
+            onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
             required
           />
+          {errors.username && <p className="text-red-400 text-sm mt-1">{errors.username}</p>}
         </div>
 
         <div>
-          <label htmlFor="email" className="block text-sm mb-1 text-gray-300">
-            Email
-          </label>
+          <label className="block mb-1 text-sm text-gray-300">Email</label>
           <input
             type="email"
-            id="email"
-            name="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleChange}
-            className="w-full px-4 py-2 rounded bg-gray-900 border border-gray-600"
+            autoComplete="email"
+            className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={form.email}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
             required
           />
+          {errors.email && <p className="text-red-400 text-sm mt-1">{errors.email}</p>}
         </div>
 
         <div>
-          <label htmlFor="role" className="block text-sm mb-1 text-gray-300">
-            Role
-          </label>
+          <label className="block mb-1 text-sm text-gray-300">Rol</label>
           <select
-            id="role"
-            name="role"
-            value={formData.role}
-            onChange={handleChange}
-            className="w-full px-4 py-2 rounded bg-gray-900 border border-gray-600"
-            required
+            className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg"
+            value={form.role}
+            onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as Role }))}
           >
-            <option value="">Select role</option>
-            <option value="admin">Admin</option>
-            <option value="frontdesk">Frontdesk</option>
-            <option value="mechanic">Mechanic</option>
+            {roles.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
           </select>
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm mb-1 text-gray-300">
-            New Password (optional)
-          </label>
+          <label className="block mb-1 text-sm text-gray-300">Password (opcional)</label>
           <input
             type="password"
-            id="password"
-            name="password"
-            placeholder="Leave empty to keep current password"
-            value={formData.password}
-            onChange={handleChange}
-            className="w-full px-4 py-2 rounded bg-gray-900 border border-gray-600"
+            autoComplete="new-password"
+            placeholder="Dejar vacío para no cambiar"
+            className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={form.password}
+            onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
           />
         </div>
 
-        <button
-          type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded font-semibold transition"
-        >
-          Save Changes
-        </button>
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            disabled={mLoading || qLoading}
+            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-60"
+          >
+            {mLoading ? "Guardando..." : "Guardar cambios"}
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/users")}
+            className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600"
+          >
+            Cancelar
+          </button>
+        </div>
       </form>
+
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 px-4 py-2 rounded-lg shadow ${
+            toast.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {toast.msg}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,7 +1,15 @@
 // control/src/pages/Settings.tsx
 
 import { Link } from "react-router-dom"
-import { Users, Settings as SettingsIcon, FileText, ClipboardList, Briefcase, Building2, Wrench } from "lucide-react"
+import {
+  Users,
+  Settings as SettingsIcon,
+  FileText,
+  ClipboardList,
+  Briefcase,
+  Building2,
+  Wrench,
+} from "lucide-react"
 
 export default function Settings() {
   const settingsLinks = [
@@ -45,11 +53,13 @@ export default function Settings() {
 
   return (
     <div className="p-6 text-white">
+      {/* Encabezado */}
       <div className="flex items-center gap-2 mb-6">
         <SettingsIcon size={28} />
         <h1 className="text-3xl font-bold">Settings</h1>
       </div>
 
+      {/* Tarjetas de configuración */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {settingsLinks.map((item) => (
           <Link

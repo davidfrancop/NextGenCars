@@ -1,34 +1,38 @@
 // control/src/components/RoleProtectedRoute.tsx
 
 import { Navigate, Outlet, useLocation } from "react-router-dom"
-import { useAuth } from "@/auth/AuthProvider"
+import Layout from "@/components/Layout"
+import { getCurrentUserRole } from "@/utils/token"
 
-type Props = { allowedRoles: string[] }
+type RoleProtectedRouteProps = {
+  allowedRoles: string[]
+}
 
-export default function RoleProtectedRoute({ allowedRoles }: Props) {
-  const { user } = useAuth()
+/**
+ * Guard de rutas por rol usando Outlet.
+ * Uso en router:
+ *   <Route element={<RoleProtectedRoute allowedRoles={["admin"]} />}>
+ *     <Route path="users" element={<Users />} />
+ *   </Route>
+ */
+export default function RoleProtectedRoute({ allowedRoles }: RoleProtectedRouteProps) {
   const location = useLocation()
+  const role = getCurrentUserRole()
 
-  // No autenticado → login
-  if (!user) {
+  // Sin sesión → login
+  if (!role) {
     return <Navigate to="/login" replace state={{ from: location }} />
   }
 
-  // Normaliza role a minúsculas
-  const role = (user.role || "").toLowerCase()
-  const ok = allowedRoles.map(r => r.toLowerCase()).includes(role)
-
   // Rol no permitido → unauthorized
-  if (!ok) {
-    return (
-      <Navigate
-        to="/unauthorized"
-        replace
-        state={{ from: location, needed: allowedRoles }}
-      />
-    )
+  if (!allowedRoles.includes(role)) {
+    return <Navigate to="/unauthorized" replace />
   }
 
-  // OK → renderiza las rutas hijas
-  return <Outlet />
+  // Autorizado → render layout + children (Outlet)
+  return (
+    <Layout>
+      <Outlet />
+    </Layout>
+  )
 }
