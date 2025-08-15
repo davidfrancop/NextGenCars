@@ -4,7 +4,7 @@
 
 ### **5C.8 – Redirigir por rol en login**
 - [x] Implementado
-- [ ] Test con roles no-admin
+- [x] Test con roles no-admin
 
 ### **5C.9 – 🔐 Protección de rutas según rol**
 - [ ] Implementar `RoleGuard`
