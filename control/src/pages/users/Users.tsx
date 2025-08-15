@@ -1,6 +1,6 @@
 // src/pages/users/Users.tsx
 
-import { useQuery, useMutation, gql } from "@apollo/client"
+import { useQuery, useMutation } from "@apollo/client"
 import { GET_USERS } from "@/graphql/queries/getUsers"
 import { DELETE_USER } from "@/graphql/mutations/deleteUser"
 import { useNavigate } from "react-router-dom"
@@ -21,36 +21,48 @@ function formatDateSafe(value: string | null) {
   return isNaN(d.getTime()) ? "—" : d.toLocaleDateString()
 }
 
+// ✅ decodifica el sub (user_id actual) del JWT guardado
+function getCurrentUserId(): number | null {
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) return null
+    const payload = JSON.parse(atob(token.split(".")[1] || ""))
+    const sub = payload?.sub
+    if (typeof sub === "number") return sub
+    const n = Number(sub)
+    return Number.isFinite(n) ? n : null
+  } catch {
+    return null
+  }
+}
+
 export default function Users() {
   const navigate = useNavigate()
-
-  const { data, loading, error } = useQuery(GET_USERS, {
-    fetchPolicy: "cache-and-network",
-  })
+  const { data, loading, error } = useQuery(GET_USERS, { fetchPolicy: "cache-and-network" })
 
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null)
 
-  // Mutación con optimistic + update para evitar refetch
+  // 👇 errorPolicy: 'all' evita propagación que pueda activar redirecciones globales
   const [deleteUser] = useMutation(DELETE_USER, {
+    errorPolicy: "all",
     update(cache, { data }) {
       const deletedId: number | undefined = data?.deleteUser?.user_id
       if (!deletedId) return
-      // Lee usuarios actuales del cache
       const existing = cache.readQuery<{ users: User[] }>({ query: GET_USERS })
       if (!existing?.users) return
       cache.writeQuery({
         query: GET_USERS,
-        data: {
-          users: existing.users.filter(u => u.user_id !== deletedId),
-        },
+        data: { users: existing.users.filter((u) => u.user_id !== deletedId) },
       })
     },
-    onCompleted: () => {
+    onCompleted: (data) => {
+      // Si el backend devolvió errores junto a datos, no hacemos navigate global
       setToast({ type: "success", msg: "User deleted" })
       setTimeout(() => setToast(null), 1500)
     },
     onError: (err) => {
+      // Capturamos aquí para que NO suba al errorLink global
       setToast({ type: "error", msg: err.message || "Error deleting user" })
       setTimeout(() => setToast(null), 1800)
     },
@@ -59,14 +71,27 @@ export default function Users() {
   const users: User[] = useMemo(() => data?.users ?? [], [data])
 
   const handleDelete = async (userId: number) => {
+    const currentUserId = getCurrentUserId()
+
+    // ⛔ evita disparar errores de negocio que gatillan redirecciones globales
+    if (userId === 1) {
+      setToast({ type: "error", msg: "No se puede eliminar el admin principal." })
+      setTimeout(() => setToast(null), 1800)
+      return
+    }
+    if (currentUserId && userId === currentUserId) {
+      setToast({ type: "error", msg: "No puedes eliminar tu propio usuario." })
+      setTimeout(() => setToast(null), 1800)
+      return
+    }
+
     if (!window.confirm("Are you sure you want to delete this user?")) return
+
     setDeletingId(userId)
     try {
       await deleteUser({
-        variables: { user_id: userId }, // 👈 nombre exacto que espera el backend
-        optimisticResponse: {
-          deleteUser: { __typename: "User", user_id: userId },
-        },
+        variables: { userId }, // 👈 camelCase correcto
+        optimisticResponse: { deleteUser: { __typename: "User", user_id: userId } },
       })
     } finally {
       setDeletingId(null)
@@ -90,9 +115,7 @@ export default function Users() {
       {loading && <p className="text-center text-gray-400">Loading users...</p>}
       {error && <p className="text-center text-red-500">Error loading users</p>}
 
-      {!loading && users.length === 0 && (
-        <p className="text-center text-gray-400">No users found.</p>
-      )}
+      {!loading && users.length === 0 && <p className="text-center text-gray-400">No users found.</p>}
 
       {!loading && users.length > 0 && (
         <div className="overflow-x-auto bg-gray-800 rounded-lg shadow">
@@ -112,9 +135,7 @@ export default function Users() {
                 return (
                   <tr
                     key={user.user_id}
-                    className={`border-t border-gray-700 transition ${
-                      isRowDeleting ? "opacity-60" : "hover:bg-gray-700"
-                    }`}
+                    className={`border-t border-gray-700 transition ${isRowDeleting ? "opacity-60" : "hover:bg-gray-700"}`}
                   >
                     <td className="px-4 py-2">{user.username}</td>
                     <td className="px-4 py-2">{user.email}</td>
@@ -151,11 +172,7 @@ export default function Users() {
       )}
 
       {toast && (
-        <div
-          className={`fixed bottom-6 right-6 px-4 py-2 rounded-lg shadow ${
-            toast.type === "success" ? "bg-green-600" : "bg-red-600"
-          }`}
-        >
+        <div className={`fixed bottom-6 right-6 px-4 py-2 rounded-lg shadow ${toast.type === "success" ? "bg-green-600" : "bg-red-600"}`}>
           {toast.msg}
         </div>
       )}

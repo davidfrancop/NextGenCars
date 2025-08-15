@@ -1,4 +1,4 @@
-// control/src/main.tsx
+// src/main.tsx
 
 import React from "react"
 import ReactDOM from "react-dom/client"
@@ -35,7 +35,7 @@ import Vehicles from "./pages/vehicles/Vehicles"
 import CreateVehicle from "./pages/vehicles/CreateVehicle"
 import EditVehicle from "./pages/vehicles/EditVehicle"
 
-// Settings
+// Configuración
 import Settings from "./pages/Settings"
 
 function RoleBasedDashboard() {
@@ -52,43 +52,44 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Públicas */}
+            {/* ✅ Rutas públicas */}
             <Route path="/login" element={<Login />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
 
-            {/* Dashboard con guard por rol */}
+            {/* 🔐 Dashboard con guard */}
             <Route element={<RoleProtectedRoute allowedRoles={["admin", "frontdesk", "mechanic"]} />}>
               <Route path="/dashboard" element={<RoleBasedDashboard />} />
             </Route>
 
-            {/* Users (admin) */}
+            {/* 🔐 Usuarios (solo admin) */}
             <Route element={<RoleProtectedRoute allowedRoles={["admin"]} />}>
               <Route path="/users" element={<Users />} />
               <Route path="/users/create" element={<CreateUser />} />
-              <Route path="/users/edit/:userId" element={<EditUser />} />
+              <Route path="/users/:id/edit" element={<EditUser />} />
             </Route>
 
-            {/* Clients (admin, frontdesk) */}
+            {/* 🔐 Clientes */}
             <Route element={<RoleProtectedRoute allowedRoles={["admin", "frontdesk"]} />}>
               <Route path="/clients" element={<Clients />} />
               <Route path="/clients/create" element={<CreateClient />} />
-              <Route path="/clients/edit/:clientId" element={<EditClient />} />
+              <Route path="/clients/:id/edit" element={<EditClient />} />
             </Route>
 
-            {/* Vehicles (admin, frontdesk, mechanic) */}
-            <Route element={<RoleProtectedRoute allowedRoles={["admin", "frontdesk", "mechanic"]} />}>
+            {/* 🔐 Vehículos */}
+            <Route element={<RoleProtectedRoute allowedRoles={["admin", "mechanic"]} />}>
               <Route path="/vehicles" element={<Vehicles />} />
               <Route path="/vehicles/create" element={<CreateVehicle />} />
-              <Route path="/vehicles/edit/:vehicleId" element={<EditVehicle />} />
+              <Route path="/vehicles/:id/edit" element={<EditVehicle />} />
             </Route>
 
-            {/* Settings (admin) */}
+            {/* 🔐 Configuración */}
             <Route element={<RoleProtectedRoute allowedRoles={["admin"]} />}>
               <Route path="/settings" element={<Settings />} />
             </Route>
 
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            {/* 🌐 Fallback */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

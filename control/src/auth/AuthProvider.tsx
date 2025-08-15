@@ -1,6 +1,6 @@
-//control/src/auth/AuthProvider.tsx
+// control/src/auth/AuthProvider.tsx
 import { createContext, useContext, useEffect, useState } from "react"
-import { getToken, saveToken, removeToken, parseToken } from "@/utils/token"
+import { getToken, saveToken, removeToken, parseToken, isTokenExpired } from "@/utils/token"
 
 type User = {
   role: string
@@ -24,16 +24,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const checkAuth = () => {
     const token = getToken()
-    if (token) {
-      const decoded = parseToken(token)
-      if (decoded?.role) {
-        setIsAuthenticated(true)
-        setUser(decoded)
-      }
+
+    if (!token || isTokenExpired(token)) {
+      removeToken()
+      setIsAuthenticated(false)
+      setUser(null)
+      return
     }
-    setLoading(false) // ✅ marcar como completado después de verificar
+
+    const decoded = parseToken(token)
+    if (decoded?.role) {
+      setIsAuthenticated(true)
+      setUser({
+        ...decoded,
+        role: decoded.role || "",
+        email: decoded.email || "",
+      })
+    }
+  }
+
+  useEffect(() => {
+    // 🔹 Chequeo inicial
+    checkAuth()
+    // 🔹 Chequeo periódico
+    const interval = setInterval(checkAuth, 60 * 1000)
+    setLoading(false)
+    return () => clearInterval(interval)
   }, [])
 
   const login = (token: string) => {
@@ -41,7 +59,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const decoded = parseToken(token)
     if (decoded?.role) {
       setIsAuthenticated(true)
-      setUser(decoded)
+      setUser({
+        ...decoded,
+        role: decoded.role || "",
+        email: decoded.email || "",
+      })
     }
   }
 

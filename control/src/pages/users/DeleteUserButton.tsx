@@ -1,28 +1,38 @@
-//control/src/pages/users/DeleteUserButton.tsx
+// control/src/pages/users/DeleteUserButton.tsx
 
 import { useState } from "react"
 import { gql, useMutation } from "@apollo/client"
+import { GET_USERS } from "@/graphql/queries/getUsers"
 
 const DELETE_USER = gql`
-  mutation DeleteUser($user_id: Int!) {
-    deleteUser(user_id: $user_id) {
+  mutation DeleteUser($userId: Int!) {
+    deleteUser(userId: $userId) {
       user_id
     }
   }
 `
 
-export default function DeleteUserButton({ userId, onDeleted }: { userId: number; onDeleted?: () => void }) {
+export default function DeleteUserButton({
+  userId,
+  onDeleted,
+}: {
+  userId: number
+  onDeleted?: () => void
+}) {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null)
+
   const [deleteUser, { loading }] = useMutation(DELETE_USER, {
+    variables: { userId },
+    refetchQueries: [{ query: GET_USERS }],
     onCompleted: () => {
-      setToast({ type: "success", msg: "User deleted" })
+      setToast({ type: "success", msg: "Usuario eliminado" })
       onDeleted?.()
       setConfirmOpen(false)
       setTimeout(() => setToast(null), 1200)
     },
     onError: (err) => {
-      setToast({ type: "error", msg: err.message || "Delete failed" })
+      setToast({ type: "error", msg: err.message || "Error al eliminar" })
       setTimeout(() => setToast(null), 1500)
     },
   })
@@ -54,7 +64,7 @@ export default function DeleteUserButton({ userId, onDeleted }: { userId: number
                 type="button"
                 disabled={loading}
                 className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white disabled:opacity-60"
-                onClick={() => deleteUser({ variables: { user_id: userId } })}
+                onClick={() => deleteUser()}
               >
                 {loading ? "Deleting..." : "Delete"}
               </button>

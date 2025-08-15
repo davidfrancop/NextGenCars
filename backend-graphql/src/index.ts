@@ -1,8 +1,10 @@
+//backend-graphql/src/index.ts
+
 import "dotenv/config"
 import { createServer } from "node:http"
 import { createYoga } from "graphql-yoga"
 import { schema } from "./schema"
-import { context, type Context } from "./context"
+import { createContext, type Context } from "./context"
 import os from "node:os"
 
 function getLanIP() {
@@ -21,18 +23,19 @@ const FALLBACK_PUBLIC = getLanIP()
 const PUBLIC_HOST = process.env.PUBLIC_HOST || FALLBACK_PUBLIC
 
 // Permite orígenes declarados (o localhost/LAN por defecto)
-const corsOrigins = (process.env.CORS_ORIGINS?.split(",").map(s => s.trim()).filter(Boolean)) ?? [
-  `http://localhost:5173`,
-  `http://${PUBLIC_HOST}:5173`,
-]
+const corsOrigins =
+  process.env.CORS_ORIGINS?.split(",").map((s) => s.trim()).filter(Boolean) ?? [
+    `http://localhost:5173`,
+    `http://${PUBLIC_HOST}:5173`,
+  ]
 
 const yoga = createYoga<Context>({
   schema,
-  context,
+  context: createContext, // ✅ usa la función createContext
   graphiql: true,
   cors: {
     origin: corsOrigins,
-    credentials: false, // si usaras cookies, poner true
+    credentials: false, // si usas cookies, poner true
   },
 })
 

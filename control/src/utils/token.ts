@@ -28,10 +28,8 @@ export function removeToken() {
 // ===== Base64URL decode seguro =====
 function base64UrlDecode(input: string): string {
   try {
-    // JWT usa base64url ( - _ ) y sin padding
     const base64 = input.replace(/-/g, "+").replace(/_/g, "/")
     const padded = base64 + "===".slice((base64.length + 3) % 4)
-    // atob puede fallar si hay caracteres inválidos
     return typeof atob === "function" ? atob(padded) : Buffer.from(padded, "base64").toString("binary")
   } catch {
     return ""
@@ -76,7 +74,7 @@ export function getUserId(): string | null {
 // ===== Estado/validación =====
 export function isTokenExpired(token: string): boolean {
   const payload = parseToken(token)
-  if (!payload?.exp) return false // si no hay exp, no marcamos expirado (ajústalo si quieres forzar exp)
+  if (!payload?.exp) return false
   const nowSec = Math.floor(Date.now() / 1000)
   return payload.exp <= nowSec
 }

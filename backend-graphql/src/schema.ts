@@ -39,7 +39,7 @@ export const schema = createSchema<Context>({
       drive: String
       transmission: String
       km: Int
-      client: Client # ✅ relación con Client
+      client: Client
     }
 
     type DashboardStats {
@@ -70,6 +70,7 @@ export const schema = createSchema<Context>({
     type Query {
       hello: String!
       users: [User!]!
+      user(userId: Int!): User                 # ✅ añadido
       dashboardStats: DashboardStats!
       recentWorkOrders: [WorkOrderPreview!]!
       appointmentsThisWeek: [AppointmentsPerDay!]!
@@ -94,6 +95,14 @@ export const schema = createSchema<Context>({
         password: String!
         role: String!
       ): User!
+      updateUser(                                # ✅ añadido
+        userId: Int!
+        username: String!
+        email: String!
+        role: String!
+        password: String
+      ): User!
+      deleteUser(userId: Int!): User!
 
       # Clients
       createClient(
