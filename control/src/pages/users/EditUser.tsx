@@ -10,13 +10,16 @@ const roles = ["admin", "frontdesk", "mechanic"] as const
 type Role = typeof roles[number]
 
 export default function EditUser() {
-  const { userId } = useParams<{ userId: string }>()
-  const uid = Number(userId)
+  // 👇 lee ambos nombres, prioriza :id (tu router actual usa /users/:id/edit)
+  const { id: idParam, userId: userIdParam } = useParams<{ id?: string; userId?: string }>()
+  const uid = Number(idParam ?? userIdParam)
+  const isValidId = Number.isInteger(uid) && uid > 0
+
   const navigate = useNavigate()
 
   const { data, loading: qLoading, error: qError } = useQuery(GET_USER, {
-    variables: { userId: uid },
-    skip: !uid,
+    variables: { userId: uid },         // el backend espera userId (camelCase)
+    skip: !isValidId,                   // evita ejecutar con NaN/ID inválido
     fetchPolicy: "cache-and-network",
   })
 
@@ -66,11 +69,11 @@ export default function EditUser() {
 
   const onSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault()
-    if (!validate()) return
+    if (!validate() || !isValidId) return
 
     await updateUser({
       variables: {
-        userId: uid,
+        userId: uid, // 👈 camelCase para el backend
         username: form.username.trim(),
         email: form.email.trim(),
         role: form.role,
@@ -79,7 +82,7 @@ export default function EditUser() {
     })
   }
 
-  if (!uid) return <div className="p-6 text-red-400">ID de usuario inválido.</div>
+  if (!isValidId) return <div className="p-6 text-red-400">ID de usuario inválido.</div>
   if (qError) return <div className="p-6 text-red-400">Error: {qError.message}</div>
 
   return (
@@ -124,9 +127,7 @@ export default function EditUser() {
             title="Seleccione el rol del usuario"
           >
             {roles.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
+              <option key={r} value={r}>{r}</option>
             ))}
           </select>
         </div>
@@ -162,11 +163,7 @@ export default function EditUser() {
       </form>
 
       {toast && (
-        <div
-          className={`fixed bottom-6 right-6 px-4 py-2 rounded-lg shadow ${
-            toast.type === "success" ? "bg-green-600" : "bg-red-600"
-          }`}
-        >
+        <div className={`fixed bottom-6 right-6 px-4 py-2 rounded-lg shadow ${toast.type === "success" ? "bg-green-600" : "bg-red-600"}`}>
           {toast.msg}
         </div>
       )}

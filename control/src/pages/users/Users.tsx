@@ -145,7 +145,7 @@ export default function Users() {
                       <div className="flex items-center gap-3">
                         <button
                           type="button"
-                          onClick={() => navigate(`/users/edit/${user.user_id}`)}
+                          onClick={() => navigate(`${user.user_id}/edit`)}
                           title="Edit user"
                           className="inline-flex text-yellow-400 hover:text-yellow-300 disabled:opacity-50"
                           disabled={isRowDeleting}
