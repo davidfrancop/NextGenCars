@@ -3,14 +3,13 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom"
 import Layout from "@/components/Layout"
 import { useAuth } from "@/auth/AuthProvider"
+import { rolesForPath, Role } from "@/config/menuItems"
 
-type RoleProtectedRouteProps = {
-  allowedRoles: string[]
-}
-
-export default function RoleProtectedRoute({ allowedRoles }: RoleProtectedRouteProps) {
+export default function RoleProtectedRoute() {
   const location = useLocation()
   const { isAuthenticated, user, loading } = useAuth()
+
+  const allowedRoles = rolesForPath(location.pathname)
 
   if (loading) {
     return <div className="p-6 text-center text-white">Cargando...</div>
@@ -20,7 +19,7 @@ export default function RoleProtectedRoute({ allowedRoles }: RoleProtectedRouteP
     return <Navigate to="/login" replace state={{ from: location }} />
   }
 
-  if (!allowedRoles.includes(user.role.toLowerCase())) {
+  if (!allowedRoles.includes(user.role.toLowerCase() as Role)) {
     return <Navigate to="/unauthorized" replace />
   }
 

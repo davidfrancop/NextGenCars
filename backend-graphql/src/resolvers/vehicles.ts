@@ -1,3 +1,5 @@
+//backend-graphql/src/resolvers/vehicles.ts
+
 import { Context } from "../context";
 
 export const vehicleResolvers = {

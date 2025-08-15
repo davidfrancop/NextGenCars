@@ -56,34 +56,34 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route path="/login" element={<Login />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
 
-            {/* 🔐 Dashboard con guard */}
-            <Route element={<RoleProtectedRoute allowedRoles={["admin", "frontdesk", "mechanic"]} />}>
+            {/* 🔐 Dashboard */}
+            <Route element={<RoleProtectedRoute />}>
               <Route path="/dashboard" element={<RoleBasedDashboard />} />
             </Route>
 
-            {/* 🔐 Usuarios (solo admin) */}
-            <Route element={<RoleProtectedRoute allowedRoles={["admin"]} />}>
+            {/* 🔐 Usuarios */}
+            <Route element={<RoleProtectedRoute />}>
               <Route path="/users" element={<Users />} />
               <Route path="/users/create" element={<CreateUser />} />
               <Route path="/users/:id/edit" element={<EditUser />} />
             </Route>
 
             {/* 🔐 Clientes */}
-            <Route element={<RoleProtectedRoute allowedRoles={["admin", "frontdesk"]} />}>
+            <Route element={<RoleProtectedRoute />}>
               <Route path="/clients" element={<Clients />} />
               <Route path="/clients/create" element={<CreateClient />} />
               <Route path="/clients/:id/edit" element={<EditClient />} />
             </Route>
 
             {/* 🔐 Vehículos */}
-            <Route element={<RoleProtectedRoute allowedRoles={["admin", "mechanic"]} />}>
+            <Route element={<RoleProtectedRoute />}>
               <Route path="/vehicles" element={<Vehicles />} />
               <Route path="/vehicles/create" element={<CreateVehicle />} />
               <Route path="/vehicles/:id/edit" element={<EditVehicle />} />
             </Route>
 
             {/* 🔐 Configuración */}
-            <Route element={<RoleProtectedRoute allowedRoles={["admin"]} />}>
+            <Route element={<RoleProtectedRoute />}>
               <Route path="/settings" element={<Settings />} />
             </Route>
 
