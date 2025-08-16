@@ -7,10 +7,10 @@
 - [x] Test con roles no-admin
 
 ### **5C.9 – 🔐 Protección de rutas según rol**
-- [ ] Implementar `RoleGuard`
-- [ ] Integrar en `PrivateRoute` o wrapper
-- [ ] Probar acceso con `admin`, `mechanic`, `frontdesk`
-- [ ] Redirección o mensaje en acceso no autorizado
+- [x] Implementar `RoleGuard`
+- [x] Integrar en `PrivateRoute` o wrapper
+- [x] Probar acceso con `admin`, `mechanic`, `frontdesk`
+- [x] Redirección o mensaje en acceso no autorizado
 
 ### **5C.10 – Sidebar dinámico por rol**
 - [x] Implementado
