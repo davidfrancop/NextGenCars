@@ -1,72 +1,84 @@
 // control/src/pages/users/DeleteUserButton.tsx
 
 import { useState } from "react"
-import { gql, useMutation } from "@apollo/client"
+import { useMutation } from "@apollo/client"
+import { Trash2 } from "lucide-react"
+import { DELETE_USER } from "@/graphql/mutations/deleteUser"
 import { GET_USERS } from "@/graphql/queries/getUsers"
 
-const DELETE_USER = gql`
-  mutation DeleteUser($userId: Int!) {
-    deleteUser(userId: $userId) {
-      user_id
-    }
-  }
-`
+type Toast = { type: "success" | "error"; msg: string } | null
 
 export default function DeleteUserButton({
   userId,
+  username,
   onDeleted,
+  size = 18,
 }: {
   userId: number
+  username?: string
   onDeleted?: () => void
+  size?: number
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null)
+  const [toast, setToast] = useState<Toast>(null)
 
-  const [deleteUser, { loading }] = useMutation(DELETE_USER, {
+  const [mutate, { loading }] = useMutation(DELETE_USER, {
     variables: { userId },
-    refetchQueries: [{ query: GET_USERS }],
-    onCompleted: () => {
-      setToast({ type: "success", msg: "Usuario eliminado" })
+    errorPolicy: "all",
+    update(cache, { data }) {
+      const deletedId: number | undefined = data?.deleteUser?.user_id
+      if (!deletedId) return
+      const existing = cache.readQuery<{ users: any[] }>({ query: GET_USERS })
+      if (!existing?.users) return
+      cache.writeQuery({
+        query: GET_USERS,
+        data: { users: existing.users.filter((u) => u.user_id !== deletedId) },
+      })
+    },
+    onCompleted() {
+      setToast({ type: "success", msg: "User deleted." })
       onDeleted?.()
       setConfirmOpen(false)
       setTimeout(() => setToast(null), 1200)
     },
-    onError: (err) => {
-      setToast({ type: "error", msg: err.message || "Error al eliminar" })
-      setTimeout(() => setToast(null), 1500)
+    onError(err) {
+      setToast({ type: "error", msg: err?.message || "Could not delete the user." })
+      setTimeout(() => setToast(null), 1800)
     },
   })
 
   return (
     <>
       <button
-        type="button"
-        className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm"
+        title="Delete"
         onClick={() => setConfirmOpen(true)}
+        className="inline-flex items-center justify-center rounded-md bg-red-600 hover:bg-red-500 px-2 py-1"
       >
-        Delete
+        <Trash2 size={size} />
       </button>
 
       {confirmOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-white mb-2">Confirm delete</h3>
-            <p className="text-gray-300 mb-4">¿Seguro que deseas eliminar este usuario?</p>
-            <div className="flex justify-end gap-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm rounded-lg bg-gray-800 p-5 shadow-xl">
+            <h3 className="text-lg font-semibold mb-2">Confirm deletion</h3>
+            <p className="text-sm text-gray-300">
+              Delete {username ? <strong>{username}</strong> : "this user"}? This action cannot be undone.
+            </p>
+
+            <div className="mt-4 flex justify-end gap-2">
               <button
-                type="button"
-                className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white"
+                className="rounded-md bg-gray-700 hover:bg-gray-600 px-3 py-2"
                 onClick={() => setConfirmOpen(false)}
+                disabled={loading}
               >
                 Cancel
               </button>
               <button
-                type="button"
+                className="rounded-md bg-red-600 hover:bg-red-500 px-3 py-2 disabled:opacity-60"
+                onClick={() => mutate()}
                 disabled={loading}
-                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white disabled:opacity-60"
-                onClick={() => deleteUser()}
               >
-                {loading ? "Deleting..." : "Delete"}
+                {loading ? "Deleting…" : "Delete"}
               </button>
             </div>
           </div>

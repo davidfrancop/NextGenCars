@@ -1,6 +1,6 @@
 // control/src/pages/users/EditUser.tsx
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { useMutation, useQuery } from "@apollo/client"
 import { GET_USER, GET_USERS } from "@/graphql/queries/getUsers"
@@ -8,19 +8,19 @@ import { UPDATE_USER } from "@/graphql/mutations/updateUser"
 
 const roles = ["admin", "frontdesk", "mechanic"] as const
 type Role = typeof roles[number]
+type Toast = { type: "success" | "error"; msg: string } | null
 
 export default function EditUser() {
-  // 👇 lee ambos nombres, prioriza :id (tu router actual usa /users/:id/edit)
   const { id: idParam, userId: userIdParam } = useParams<{ id?: string; userId?: string }>()
   const uid = Number(idParam ?? userIdParam)
   const isValidId = Number.isInteger(uid) && uid > 0
-
   const navigate = useNavigate()
 
   const { data, loading: qLoading, error: qError } = useQuery(GET_USER, {
-    variables: { userId: uid },         // el backend espera userId (camelCase)
-    skip: !isValidId,                   // evita ejecutar con NaN/ID inválido
+    variables: { userId: uid },
+    skip: !isValidId,
     fetchPolicy: "cache-and-network",
+    errorPolicy: "all",
   })
 
   const [form, setForm] = useState({
@@ -29,23 +29,8 @@ export default function EditUser() {
     role: "frontdesk" as Role,
     password: "",
   })
-  const [errors, setErrors] = useState<{ email?: string; username?: string }>({})
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null)
-
-  const [updateUser, { loading: mLoading }] = useMutation(UPDATE_USER, {
-    refetchQueries: [{ query: GET_USERS }],
-    onCompleted: () => {
-      setToast({ type: "success", msg: "Usuario actualizado" })
-      setTimeout(() => navigate("/users", { replace: true }), 700)
-    },
-    onError: (err) => {
-      const msg = err.message || "Fallo al actualizar"
-      if (/unique|duplicate|already exists/i.test(msg)) {
-        setErrors((e) => ({ ...e, email: "Email ya está en uso" }))
-      }
-      setToast({ type: "error", msg })
-    },
-  })
+  const [errors, setErrors] = useState<{ username?: string; email?: string; role?: string; password?: string }>({})
+  const [toast, setToast] = useState<Toast>(null)
 
   useEffect(() => {
     if (data?.user) {
@@ -53,117 +38,160 @@ export default function EditUser() {
       setForm({
         username: u.username ?? "",
         email: u.email ?? "",
-        role: (u.role || "frontdesk") as Role,
+        role: (u.role as Role) ?? "frontdesk",
         password: "",
       })
     }
   }, [data])
 
-  const validate = () => {
+  const [updateUser, { loading: mLoading }] = useMutation(UPDATE_USER, {
+    errorPolicy: "all",
+    update(cache, { data }) {
+      const updated = data?.updateUser
+      if (!updated) return
+      const existing = cache.readQuery<{ users: any[] }>({ query: GET_USERS })
+      if (!existing?.users) return
+      cache.writeQuery({
+        query: GET_USERS,
+        data: { users: existing.users.map((u) => (u.user_id === updated.user_id ? { ...u, ...updated } : u)) },
+      })
+    },
+    onCompleted() {
+      setToast({ type: "success", msg: "User updated successfully." })
+      setTimeout(() => {
+        setToast(null)
+        navigate("/users")
+      }, 900)
+    },
+    onError(err) {
+      const msg = err?.message || "Could not update the user."
+      if (/(ya está en uso|already.*in use)/i.test(msg)) {
+        setErrors((e) => ({ ...e, email: "This email is already in use." }))
+      }
+      setToast({ type: "error", msg })
+      setTimeout(() => setToast(null), 1800)
+    },
+  })
+
+  const emailRegex = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/, [])
+
+  function validate() {
     const e: typeof errors = {}
-    if (!form.username.trim()) e.username = "Obligatorio"
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = "Email no válido"
+    if (!form.username.trim() || form.username.trim().length < 3) e.username = "At least 3 characters."
+    if (!emailRegex.test(form.email)) e.email = "Invalid email format."
+    if (!roles.includes(form.role)) e.role = "Invalid role."
+    if (form.password && form.password.length < 6) e.password = "At least 6 characters."
     setErrors(e)
     return Object.keys(e).length === 0
   }
 
-  const onSubmit = async (ev: React.FormEvent) => {
+  async function onSubmit(ev: React.FormEvent) {
     ev.preventDefault()
-    if (!validate() || !isValidId) return
-
+    if (!validate()) return
     await updateUser({
       variables: {
-        userId: uid, // 👈 camelCase para el backend
+        userId: uid,
         username: form.username.trim(),
         email: form.email.trim(),
         role: form.role,
-        password: form.password || undefined,
+        password: form.password ? form.password : null,
       },
     })
   }
 
-  if (!isValidId) return <div className="p-6 text-red-400">ID de usuario inválido.</div>
-  if (qError) return <div className="p-6 text-red-400">Error: {qError.message}</div>
+  if (!isValidId) return <div className="p-6 text-red-400">Invalid user ID.</div>
+  if (qLoading) return <div className="p-6 text-gray-300">Loading user…</div>
+  if (qError) return <div className="p-6 text-red-400">Error loading user.</div>
+  if (!data?.user) return <div className="p-6 text-gray-300">User not found.</div>
 
   return (
-    <div className="p-6 text-white">
-      <h1 className="text-2xl font-bold mb-4">Editar usuario</h1>
+    <div className="max-w-2xl mx-auto p-6">
+      <h1 className="text-2xl font-semibold mb-4">Edit User</h1>
 
-      <form onSubmit={onSubmit} className="space-y-4 max-w-lg">
+      <form onSubmit={onSubmit} className="space-y-5 bg-gray-800 rounded-xl p-6 shadow">
         <div>
-          <label className="block mb-1 text-sm text-gray-300">Username</label>
+          <label className="block text-sm mb-1">Username</label>
           <input
-            className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg"
+            className={`w-full rounded-lg bg-gray-900 px-3 py-2 outline-none border ${errors.username ? "border-red-500" : "border-transparent"}`}
             value={form.username}
             onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
-            placeholder="Ingrese el nombre de usuario"
-            title="Nombre de usuario"
-            required
+            disabled={mLoading}
+            placeholder="john.doe"
           />
-          {errors.username && <p className="text-red-400 text-sm mt-1">{errors.username}</p>}
+          {errors.username && <p className="text-xs text-red-400 mt-1">{errors.username}</p>}
         </div>
 
         <div>
-          <label htmlFor="email" className="block mb-1 text-sm text-gray-300">Email</label>
+          <label className="block text-sm mb-1">Email</label>
           <input
-            id="email"
-            type="email"
-            className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg"
-            value={form.email || ""}
+            className={`w-full rounded-lg bg-gray-900 px-3 py-2 outline-none border ${errors.email ? "border-red-500" : "border-transparent"}`}
+            value={form.email}
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            placeholder="Ingrese el correo electrónico"
-            title="Correo electrónico"
-            required
+            disabled={mLoading}
+            placeholder="john@acme.com"
+            type="email"
           />
-          {errors.email && <p className="text-red-400 text-sm mt-1">{errors.email}</p>}
+          {errors.email && <p className="text-xs text-red-400 mt-1">{errors.email}</p>}
         </div>
 
         <div>
-          <label className="block mb-1 text-sm text-gray-300">Rol</label>
+          <label htmlFor="role-select" className="block text-sm mb-1">Role</label>
           <select
-            className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg"
+            id="role-select"
+            className={`w-full rounded-lg bg-gray-900 px-3 py-2 outline-none border ${errors.role ? "border-red-500" : "border-transparent"}`}
             value={form.role}
             onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as Role }))}
-            title="Seleccione el rol del usuario"
+            disabled={mLoading}
           >
             {roles.map((r) => (
-              <option key={r} value={r}>{r}</option>
+              <option key={r} value={r}>
+                {r}
+              </option>
             ))}
           </select>
+          {errors.role && <p className="text-xs text-red-400 mt-1">{errors.role}</p>}
         </div>
 
         <div>
-          <label className="block mb-1 text-sm text-gray-300">Password (opcional)</label>
+          <label className="block text-sm mb-1">Password (optional)</label>
           <input
-            type="password"
-            placeholder="Dejar vacío para no cambiar"
-            title="Contraseña (opcional)"
-            className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg"
+            className={`w-full rounded-lg bg-gray-900 px-3 py-2 outline-none border ${errors.password ? "border-red-500" : "border-transparent"}`}
             value={form.password}
             onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+            disabled={mLoading}
+            type="password"
+            placeholder="Leave empty to keep current"
+            autoComplete="new-password"
           />
+          {errors.password && <p className="text-xs text-red-400 mt-1">{errors.password}</p>}
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 pt-2">
           <button
             type="submit"
-            disabled={mLoading || qLoading}
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-60"
+            disabled={mLoading}
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 px-4 py-2 disabled:opacity-60"
           >
-            {mLoading ? "Guardando..." : "Guardar cambios"}
+            {mLoading ? "Saving…" : "Save Changes"}
           </button>
+
           <button
             type="button"
             onClick={() => navigate("/users")}
-            className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600"
+            className="rounded-lg bg-gray-700 hover:bg-gray-600 px-4 py-2"
+            disabled={mLoading}
           >
-            Cancelar
+            Cancel
           </button>
         </div>
       </form>
 
       {toast && (
-        <div className={`fixed bottom-6 right-6 px-4 py-2 rounded-lg shadow ${toast.type === "success" ? "bg-green-600" : "bg-red-600"}`}>
+        <div
+          className={`fixed bottom-6 right-6 px-4 py-2 rounded-lg shadow ${
+            toast.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
           {toast.msg}
         </div>
       )}

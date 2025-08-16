@@ -1,11 +1,11 @@
-// src/pages/users/Users.tsx
+// control/src/pages/users/Users.tsx
 
-import { useQuery, useMutation } from "@apollo/client"
+import { useMemo } from "react"
+import { useQuery } from "@apollo/client"
 import { GET_USERS } from "@/graphql/queries/getUsers"
-import { DELETE_USER } from "@/graphql/mutations/deleteUser"
 import { useNavigate } from "react-router-dom"
-import { Trash2, Pencil, UserPlus } from "lucide-react"
-import { useMemo, useState } from "react"
+import { Pencil, UserPlus } from "lucide-react"
+import DeleteUserButton from "./DeleteUserButton"
 
 type User = {
   user_id: number
@@ -15,97 +15,22 @@ type User = {
   created_at: string | null
 }
 
-function formatDateSafe(value: string | null) {
-  if (!value) return "—"
-  const d = new Date(value)
-  return isNaN(d.getTime()) ? "—" : d.toLocaleDateString()
-}
-
-// ✅ decodifica el sub (user_id actual) del JWT guardado
-function getCurrentUserId(): number | null {
-  try {
-    const token = localStorage.getItem("token")
-    if (!token) return null
-    const payload = JSON.parse(atob(token.split(".")[1] || ""))
-    const sub = payload?.sub
-    if (typeof sub === "number") return sub
-    const n = Number(sub)
-    return Number.isFinite(n) ? n : null
-  } catch {
-    return null
-  }
-}
-
 export default function Users() {
   const navigate = useNavigate()
-  const { data, loading, error } = useQuery(GET_USERS, { fetchPolicy: "cache-and-network" })
-
-  const [deletingId, setDeletingId] = useState<number | null>(null)
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null)
-
-  // 👇 errorPolicy: 'all' evita propagación que pueda activar redirecciones globales
-  const [deleteUser] = useMutation(DELETE_USER, {
+  const { data, loading, error } = useQuery(GET_USERS, {
+    fetchPolicy: "cache-and-network",
     errorPolicy: "all",
-    update(cache, { data }) {
-      const deletedId: number | undefined = data?.deleteUser?.user_id
-      if (!deletedId) return
-      const existing = cache.readQuery<{ users: User[] }>({ query: GET_USERS })
-      if (!existing?.users) return
-      cache.writeQuery({
-        query: GET_USERS,
-        data: { users: existing.users.filter((u) => u.user_id !== deletedId) },
-      })
-    },
-    onCompleted: (data) => {
-      // Si el backend devolvió errores junto a datos, no hacemos navigate global
-      setToast({ type: "success", msg: "User deleted" })
-      setTimeout(() => setToast(null), 1500)
-    },
-    onError: (err) => {
-      // Capturamos aquí para que NO suba al errorLink global
-      setToast({ type: "error", msg: err.message || "Error deleting user" })
-      setTimeout(() => setToast(null), 1800)
-    },
   })
 
   const users: User[] = useMemo(() => data?.users ?? [], [data])
 
-  const handleDelete = async (userId: number) => {
-    const currentUserId = getCurrentUserId()
-
-    // ⛔ evita disparar errores de negocio que gatillan redirecciones globales
-    if (userId === 1) {
-      setToast({ type: "error", msg: "No se puede eliminar el admin principal." })
-      setTimeout(() => setToast(null), 1800)
-      return
-    }
-    if (currentUserId && userId === currentUserId) {
-      setToast({ type: "error", msg: "No puedes eliminar tu propio usuario." })
-      setTimeout(() => setToast(null), 1800)
-      return
-    }
-
-    if (!window.confirm("Are you sure you want to delete this user?")) return
-
-    setDeletingId(userId)
-    try {
-      await deleteUser({
-        variables: { userId }, // 👈 camelCase correcto
-        optimisticResponse: { deleteUser: { __typename: "User", user_id: userId } },
-      })
-    } finally {
-      setDeletingId(null)
-    }
-  }
-
   return (
-    <div className="p-6 text-white">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Users</h1>
+    <div className="p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Users</h1>
         <button
-          type="button"
           onClick={() => navigate("/users/create")}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition"
+          className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 px-4 py-2"
         >
           <UserPlus size={18} />
           New User
@@ -114,7 +39,6 @@ export default function Users() {
 
       {loading && <p className="text-center text-gray-400">Loading users...</p>}
       {error && <p className="text-center text-red-500">Error loading users</p>}
-
       {!loading && users.length === 0 && <p className="text-center text-gray-400">No users found.</p>}
 
       {!loading && users.length > 0 && (
@@ -122,58 +46,36 @@ export default function Users() {
           <table className="min-w-full table-auto text-sm">
             <thead>
               <tr className="bg-gray-700 text-left">
-                <th className="px-4 py-2">Username</th>
-                <th className="px-4 py-2">Email</th>
-                <th className="px-4 py-2">Role</th>
-                <th className="px-4 py-2">Created At</th>
-                <th className="px-4 py-2">Actions</th>
+                <th className="px-4 py-3">ID</th>
+                <th className="px-4 py-3">Username</th>
+                <th className="px-4 py-3">Email</th>
+                <th className="px-4 py-3">Role</th>
+                <th className="px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => {
-                const isRowDeleting = deletingId === user.user_id
-                return (
-                  <tr
-                    key={user.user_id}
-                    className={`border-t border-gray-700 transition ${isRowDeleting ? "opacity-60" : "hover:bg-gray-700"}`}
-                  >
-                    <td className="px-4 py-2">{user.username}</td>
-                    <td className="px-4 py-2">{user.email}</td>
-                    <td className="px-4 py-2 capitalize">{user.role}</td>
-                    <td className="px-4 py-2">{formatDateSafe(user.created_at)}</td>
-                    <td className="px-4 py-2">
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => navigate(`${user.user_id}/edit`)}
-                          title="Edit user"
-                          className="inline-flex text-yellow-400 hover:text-yellow-300 disabled:opacity-50"
-                          disabled={isRowDeleting}
-                        >
-                          <Pencil size={18} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(user.user_id)}
-                          title="Delete user"
-                          className="inline-flex text-red-500 hover:text-red-400 disabled:opacity-50"
-                          disabled={isRowDeleting}
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
+              {users.map((u) => (
+                <tr key={u.user_id} className="border-t border-gray-700">
+                  <td className="px-4 py-3">{u.user_id}</td>
+                  <td className="px-4 py-3">{u.username}</td>
+                  <td className="px-4 py-3">{u.email}</td>
+                  <td className="px-4 py-3">{u.role}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => navigate(`/users/${u.user_id}/edit`)}
+                        className="inline-flex items-center gap-1 rounded-md bg-gray-700 hover:bg-gray-600 px-2 py-1"
+                        title="Editar"
+                      >
+                        <Pencil size={18} />
+                      </button>
+                      <DeleteUserButton userId={u.user_id} username={u.username} />
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {toast && (
-        <div className={`fixed bottom-6 right-6 px-4 py-2 rounded-lg shadow ${toast.type === "success" ? "bg-green-600" : "bg-red-600"}`}>
-          {toast.msg}
         </div>
       )}
     </div>

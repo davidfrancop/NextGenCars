@@ -32,7 +32,7 @@ export default function Unauthorized() {
           to={fromPath}
           className="px-4 py-2 rounded-2xl bg-gray-800 hover:bg-gray-700"
         >
-          Volver
+          Go Back
         </Link>
         <Link
           to="/dashboard"

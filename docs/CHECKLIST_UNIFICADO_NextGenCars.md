@@ -18,10 +18,10 @@
 ### **5C.11 – Gestión de usuarios (CRUD completo)**
 - [x] Listado de usuarios
 - [x] CreateUser con hash
-- [ ] EditUser con validaciones y toasts
-- [ ] DeleteUser con confirmación modal y toasts
-- [ ] Validar email único y formato en edición
-- [ ] QA CRUD usuarios
+- [x] EditUser con validaciones y toasts
+- [x] DeleteUser con confirmación modal y toasts
+- [x] Validar email único y formato en edición
+- [x] QA CRUD usuarios
 
 ### **5C.12 – Gestión de clientes (refactor + formularios)**
 - [x] Listado clientes

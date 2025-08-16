@@ -1,138 +1,203 @@
-// src/pages/users/CreateUser.tsx
+// control/src/pages/users/CreateUser.tsx
 
-import { useMutation } from "@apollo/client"
-import { CREATE_USER } from "@/graphql/mutations/createUser"
-import { GET_USERS } from "@/graphql/queries/getUsers" // 🔹 para refetch
+import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { useState } from "react"
+import { useMutation } from "@apollo/client"
+import { ArrowLeft, Check } from "lucide-react"
+import { CREATE_USER } from "@/graphql/mutations/createUser"
+import { GET_USERS } from "@/graphql/queries/getUsers"
 
-interface FormData {
-  username: string
-  email: string
-  password: string
-  role: string
-}
+const roles = ["admin", "frontdesk", "mechanic"] as const
+type Role = typeof roles[number]
+type Toast = { type: "success" | "error"; msg: string } | null
 
 export default function CreateUser() {
   const navigate = useNavigate()
-  const [createUser] = useMutation(CREATE_USER)
 
-  const [formData, setFormData] = useState<FormData>({
+  const [form, setForm] = useState({
     username: "",
     email: "",
+    role: "frontdesk" as Role,
     password: "",
-    role: "",
+  })
+  const [errors, setErrors] = useState<{ username?: string; email?: string; role?: string; password?: string }>({})
+  const [toast, setToast] = useState<Toast>(null)
+
+  const emailRegex = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/, [])
+
+  const [createUser, { loading }] = useMutation(CREATE_USER, {
+    errorPolicy: "all",
+    update(cache, { data }) {
+      const created = data?.createUser
+      if (!created) return
+      const existing = cache.readQuery<{ users: any[] }>({ query: GET_USERS })
+      if (!existing?.users) {
+        cache.writeQuery({ query: GET_USERS, data: { users: [created] } })
+      } else {
+        cache.writeQuery({
+          query: GET_USERS,
+          data: { users: [created, ...existing.users] },
+        })
+      }
+    },
+    onCompleted() {
+      setToast({ type: "success", msg: "User created successfully." })
+      setTimeout(() => {
+        setToast(null)
+        navigate("/users")
+      }, 900)
+    },
+    onError(err) {
+      const msg = err?.message || "Could not create the user."
+      if (/(ya está en uso|already.*in use)/i.test(msg)) {
+        setErrors((e) => ({ ...e, email: "This email is already in use." }))
+      }
+      setToast({ type: "error", msg })
+      setTimeout(() => setToast(null), 1800)
+    },
   })
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
+  function validate() {
+    const e: typeof errors = {}
+    if (!form.username.trim() || form.username.trim().length < 3) e.username = "At least 3 characters."
+    if (!emailRegex.test(form.email)) e.email = "Invalid email format."
+    if (!roles.includes(form.role)) e.role = "Invalid role."
+    if (form.password.length < 6) e.password = "At least 6 characters."
+    setErrors(e)
+    return Object.keys(e).length === 0
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  async function onSubmit(ev: React.FormEvent) {
+    ev.preventDefault()
+    if (!validate()) return
+    await createUser({
+      variables: {
+        username: form.username.trim(),
+        email: form.email.trim(),
+        role: form.role,
+        password: form.password,
+      },
+    })
+  }
 
-    try {
-      await createUser({
-        variables: {
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
-          role: formData.role,
-        },
-        // 🔹 Esto refresca la lista en Users.tsx
-        refetchQueries: [{ query: GET_USERS }],
-      })
-
-      navigate("/users")
-    } catch (err) {
-      console.error("Error creating user:", err)
+  // Quick access: ESC to go back
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") navigate(-1)
     }
-  }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [navigate])
 
   return (
-    <div className="p-6 text-white max-w-xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">Create New User</h2>
-
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-4 bg-gray-800 p-6 rounded-lg shadow"
-      >
-        <div>
-          <label htmlFor="username" className="block text-sm mb-1 text-gray-300">
-            Username
-          </label>
-          <input
-            type="text"
-            id="username"
-            name="username"
-            placeholder="Username"
-            value={formData.username}
-            onChange={handleChange}
-            className="w-full px-4 py-2 rounded bg-gray-900 border border-gray-600"
-            required
-          />
-        </div>
-
-        <div>
-          <label htmlFor="email" className="block text-sm mb-1 text-gray-300">
-            Email
-          </label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleChange}
-            className="w-full px-4 py-2 rounded bg-gray-900 border border-gray-600"
-            required
-          />
-        </div>
-
-        <div>
-          <label htmlFor="password" className="block text-sm mb-1 text-gray-300">
-            Password
-          </label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            placeholder="Password"
-            value={formData.password}
-            onChange={handleChange}
-            className="w-full px-4 py-2 rounded bg-gray-900 border border-gray-600"
-            required
-          />
-        </div>
-
-        <div>
-          <label htmlFor="role" className="block text-sm mb-1 text-gray-300">
-            Role
-          </label>
-          <select
-            id="role"
-            name="role"
-            value={formData.role}
-            onChange={handleChange}
-            className="w-full px-4 py-2 rounded bg-gray-900 border border-gray-600"
-            required
-          >
-            <option value="">Select role</option>
-            <option value="admin">Admin</option>
-            <option value="frontdesk">Frontdesk</option>
-            <option value="mechanic">Mechanic</option>
-          </select>
-        </div>
-
+    <div className="max-w-2xl mx-auto p-6">
+      {/* Header with Back button */}
+      <div className="mb-4 flex items-center gap-3">
         <button
-          type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded font-semibold transition"
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center justify-center rounded-lg bg-gray-800 hover:bg-gray-700 p-2"
+          title="Back"
         >
-          Create User
+          <ArrowLeft size={20} />
         </button>
+        <h1 className="text-2xl font-semibold">Create User</h1>
+      </div>
+
+      <form onSubmit={onSubmit} className="space-y-5 bg-gray-800 rounded-xl p-6 shadow">
+        {/* Username */}
+        <div>
+          <label className="block text-sm mb-1">Username</label>
+          <input
+            className={`w-full rounded-lg bg-gray-900 px-3 py-2 outline-none border ${errors.username ? "border-red-500" : "border-transparent"}`}
+            value={form.username}
+            onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
+            disabled={loading}
+            placeholder="john.doe"
+          />
+          {errors.username && <p className="text-xs text-red-400 mt-1">{errors.username}</p>}
+        </div>
+
+        {/* Email */}
+        <div>
+          <label className="block text-sm mb-1">Email</label>
+          <input
+            className={`w-full rounded-lg bg-gray-900 px-3 py-2 outline-none border ${errors.email ? "border-red-500" : "border-transparent"}`}
+            value={form.email}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+            disabled={loading}
+            placeholder="john@acme.com"
+            type="email"
+          />
+          {errors.email && <p className="text-xs text-red-400 mt-1">{errors.email}</p>}
+        </div>
+
+        {/* Role */}
+        <div>
+          <label className="block text-sm mb-1">Role</label>
+          <select
+            className={`w-full rounded-lg bg-gray-900 px-3 py-2 outline-none border ${errors.role ? "border-red-500" : "border-transparent"}`}
+            value={form.role}
+            onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as Role }))}
+            disabled={loading}
+            title="Select user role"
+            aria-label="Role"
+          >
+            {roles.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+          {errors.role && <p className="text-xs text-red-400 mt-1">{errors.role}</p>}
+        </div>
+
+        {/* Password */}
+        <div>
+          <label className="block text-sm mb-1">Password</label>
+          <input
+            className={`w-full rounded-lg bg-gray-900 px-3 py-2 outline-none border ${errors.password ? "border-red-500" : "border-transparent"}`}
+            value={form.password}
+            onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+            disabled={loading}
+            type="password"
+            placeholder="Minimum 6 characters"
+            autoComplete="new-password"
+          />
+          {errors.password && <p className="text-xs text-red-400 mt-1">{errors.password}</p>}
+        </div>
+
+        {/* Actions */}
+        <div className="flex flex-wrap gap-3 pt-2">
+          <button
+            type="submit"
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 px-4 py-2 disabled:opacity-60"
+          >
+            <Check size={18} />
+            {loading ? "Creating…" : "Create User"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate("/users")}
+            className="rounded-lg bg-gray-700 hover:bg-gray-600 px-4 py-2"
+            disabled={loading}
+          >
+            Cancel
+          </button>
+        </div>
       </form>
+
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 px-4 py-2 rounded-lg shadow ${
+            toast.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {toast.msg}
+        </div>
+      )}
     </div>
   )
 }
