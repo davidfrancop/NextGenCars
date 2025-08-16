@@ -30,7 +30,9 @@ function base64UrlDecode(input: string): string {
   try {
     const base64 = input.replace(/-/g, "+").replace(/_/g, "/")
     const padded = base64 + "===".slice((base64.length + 3) % 4)
-    return typeof atob === "function" ? atob(padded) : Buffer.from(padded, "base64").toString("binary")
+    return typeof atob === "function"
+      ? atob(padded)
+      : Buffer.from(padded, "base64").toString("binary")
   } catch {
     return ""
   }
@@ -44,7 +46,7 @@ export function parseToken(token: string): JWTPayload | null {
     const json = base64UrlDecode(payloadB64)
     return JSON.parse(json) as JWTPayload
   } catch (e) {
-    console.error("❌ Error parsing token:", e)
+    console.warn("⚠️ Error parsing token:", e)
     return null
   }
 }

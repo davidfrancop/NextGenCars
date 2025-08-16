@@ -1,5 +1,6 @@
 // src/config/menuItems.ts
 
+import type { ComponentType } from "react"
 import {
   Home,
   Users,
@@ -21,7 +22,7 @@ export type MenuItem = {
   label: string
   path: string
   roles: Role[]
-  icon?: React.ComponentType<{ size?: number; className?: string }>
+  icon?: ComponentType<{ size?: number; className?: string }>
 }
 
 export const menuItems: MenuItem[] = [
@@ -39,7 +40,7 @@ export const menuItems: MenuItem[] = [
   // Inspections ahora también para frontdesk
   { label: "Inspections", path: "/inspections", roles: ["admin", "frontdesk", "mechanic"], icon: CheckSquare },
 
-  // Subapartado admin para plantillas de checklist
+  // Subapartado admin para plantillas de checklist (nota: path más específico)
   { label: "Checklist Manager", path: "/inspections/templates", roles: ["admin"], icon: ListChecks },
 
   // Suppliers solo admin
@@ -55,7 +56,19 @@ export const menuItems: MenuItem[] = [
 
 export const allRoles: Role[] = ["admin", "frontdesk", "mechanic"]
 
+/**
+ * Devuelve los roles permitidos para un pathname.
+ * - Usa el match MÁS ESPECÍFICO (path más largo que haga startsWith).
+ * - Deniega por defecto si no hay mapeo.
+ */
 export function rolesForPath(pathname: string): Role[] {
-  const item = menuItems.find((i) => pathname.startsWith(i.path))
-  return item ? item.roles : allRoles
+  const match = menuItems
+    .filter((i) => pathname.startsWith(i.path))
+    .sort((a, b) => b.path.length - a.path.length)[0]
+
+  if (!match) {
+    console.warn(`[RBAC] Path sin mapeo en menuItems: ${pathname} — denegando por defecto`)
+    return [] as Role[]
+  }
+  return match.roles
 }
