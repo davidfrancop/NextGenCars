@@ -28,11 +28,11 @@
 - [x] CreateClient
 - [x] EditClient
 - [x] DeleteClient
-- [ ] Campo `type` (PERSONAL|COMPANY) + migración DB
-- [ ] Validaciones por tipo (campos obligatorios)
-- [ ] Formulario adaptado por tipo
-- [ ] Validaciones y toasts
-- [ ] QA CRUD clientes
+- [x] Campo `type` (PERSONAL|COMPANY) + migración DB
+- [x] Validaciones por tipo (campos obligatorios)
+- [x] Formulario adaptado por tipo
+- [x] Validaciones y toasts
+- [x] QA CRUD clientes
 
 ### **5C.13 – Gestión de vehículos**
 - [x] Listado vehículos

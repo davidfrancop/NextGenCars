@@ -1,26 +1,30 @@
 // control/src/graphql/mutations/createClient.ts
+
 import { gql } from "@apollo/client"
 
 export const CREATE_CLIENT = gql`
-  mutation CreateClient(
-    $first_name: String!
-    $last_name: String!
-    $email: String
-    $phone: String
-    $country: String
-    $type: String!
-  ) {
-    createClient(
-      first_name: $first_name
-      last_name: $last_name
-      email: $email
-      phone: $phone
-      country: $country
-      type: $type
-    ) {
+  mutation CreateClient($data: CreateClientInput!) {
+    createClient(data: $data) {
       client_id
+      type
+      # PERSONAL
       first_name
       last_name
+      # COMPANY
+      company_name
+      vat_number
+      contact_person
+      # Compartidos
+      email
+      phone
+      dni
+      address
+      country
+      city
+      postal_code
+      created_at
+      updated_at
     }
   }
 `
+

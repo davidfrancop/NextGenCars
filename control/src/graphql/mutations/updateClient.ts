@@ -1,31 +1,29 @@
+// control/src/graphql/mutations/updateClient.ts
+
 import { gql } from "@apollo/client"
 
 export const UPDATE_CLIENT = gql`
-  mutation UpdateClient(
-    $client_id: Int!
-    $first_name: String
-    $last_name: String
-    $email: String
-    $phone: String
-    $country: String
-    $type: String
-  ) {
-    updateClient(
-      client_id: $client_id
-      first_name: $first_name
-      last_name: $last_name
-      email: $email
-      phone: $phone
-      country: $country
-      type: $type
-    ) {
+  mutation UpdateClient($client_id: Int!, $data: UpdateClientInput!) {
+    updateClient(client_id: $client_id, data: $data) {
       client_id
+      type
+      # PERSONAL
       first_name
       last_name
+      # COMPANY
+      company_name
+      vat_number
+      contact_person
+      # Compartidos
       email
       phone
+      dni
+      address
       country
-      type
+      city
+      postal_code
+      created_at
+      updated_at
     }
   }
 `

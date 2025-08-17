@@ -1,4 +1,5 @@
 // src/graphql/mutations/deleteClient.ts
+
 import { gql } from "@apollo/client"
 
 export const DELETE_CLIENT = gql`
