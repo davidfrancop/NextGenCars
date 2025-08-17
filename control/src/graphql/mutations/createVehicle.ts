@@ -1,4 +1,5 @@
 // control/src/graphql/mutations/createVehicle.ts
+
 import { gql } from "@apollo/client"
 
 export const CREATE_VEHICLE = gql`
@@ -7,7 +8,7 @@ export const CREATE_VEHICLE = gql`
     $make: String!
     $model: String!
     $year: Int!
-    $plate: String!          # puedes mantener este nombre en tu UI
+    $license_plate: String!
     $vin: String!
     $hsn: String!
     $tsn: String!
@@ -15,13 +16,15 @@ export const CREATE_VEHICLE = gql`
     $drive: String!
     $transmission: String!
     $km: Int!
+    $tuv_date: String
+    $last_service_date: String
   ) {
     createVehicle(
       client_id: $client_id
       make: $make
       model: $model
       year: $year
-      license_plate: $plate   # ← el argumento correcto en el schema
+      license_plate: $license_plate
       vin: $vin
       hsn: $hsn
       tsn: $tsn
@@ -29,14 +32,17 @@ export const CREATE_VEHICLE = gql`
       drive: $drive
       transmission: $transmission
       km: $km
+      tuv_date: $tuv_date
+      last_service_date: $last_service_date
     ) {
       vehicle_id
-      client_id
       make
       model
       year
       license_plate
       vin
+      tuv_date
+      last_service_date
     }
   }
 `

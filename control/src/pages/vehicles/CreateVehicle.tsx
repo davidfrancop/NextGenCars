@@ -25,17 +25,42 @@ function displayClientName(c?: ClientLite | null) {
 }
 
 function Toast({ kind = "success", msg }: { kind?: "success" | "error"; msg: string }) {
+  const isError = kind === "error"
   return (
     <div
       className={`fixed bottom-4 right-4 px-4 py-2 rounded-xl shadow-lg text-sm z-50 ${
-        kind === "success" ? "bg-emerald-700/90" : "bg-red-700/90"
+        isError ? "bg-red-700/90" : "bg-emerald-700/90"
       }`}
-      role="status"
+      role={isError ? "alert" : "status"}
+      aria-live={isError ? "assertive" : "polite"}
     >
       {msg}
     </div>
   )
 }
+
+// --- Helpers / constants ---
+const normalizePlate = (v: string) => v.toUpperCase().replace(/\s+/g, " ").trim()
+const toISODateOrNull = (yyyyMmDd: string) => {
+  if (!yyyyMmDd) return null
+  // Force UTC midnight to avoid TZ shifts
+  const d = new Date(`${yyyyMmDd}T00:00:00Z`)
+  return isNaN(d.getTime()) ? null : d.toISOString()
+}
+
+const FUEL_OPTIONS = [
+  "Gasoline",
+  "Diesel",
+  "Hybrid",
+  "Plug-in Hybrid",
+  "Electric",
+  "CNG",
+  "LPG",
+  "Hydrogen",
+  "Other",
+] as const
+const DRIVE_OPTIONS = ["FWD", "RWD", "AWD", "4WD"] as const
+const TRANSMISSION_OPTIONS = ["Manual", "Automatic", "CVT", "DCT", "Semi-automatic"] as const
 
 export default function CreateVehicle() {
   const navigate = useNavigate()
@@ -43,15 +68,15 @@ export default function CreateVehicle() {
   const preIdParam = params.get("clientId")
   const preId = preIdParam ? Number(preIdParam) : null
 
-  // Cliente seleccionado (puede venir prefijado)
+  // Selected client (can be prefilled)
   const [selectedClient, setSelectedClient] = useState<ClientLite | null>(null)
   const [pickerOpen, setPickerOpen] = useState<boolean>(!preId)
 
-  // Toasts + error local
+  // Toast + local error
   const [toast, setToast] = useState<{ kind: "success" | "error"; msg: string } | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
-  // Si viene clientId, obtengo su info
+  // Prefill client
   const { data: preClientData } = useQuery(GET_CLIENT_BY_ID, {
     variables: { client_id: preId ?? 0 },
     skip: !preId,
@@ -72,7 +97,7 @@ export default function CreateVehicle() {
     }
   }, [preId, preClientData])
 
-  // Typeahead
+  // Typeahead search
   const [term, setTerm] = useState("")
   const [skip, setSkip] = useState(0)
   const TAKE = 20
@@ -81,7 +106,7 @@ export default function CreateVehicle() {
     fetchPolicy: "network-only",
   })
 
-  // debounce búsqueda
+  // debounce search
   const debTimer = useRef<number | null>(null)
   useEffect(() => {
     if (!pickerOpen) return
@@ -109,19 +134,22 @@ export default function CreateVehicle() {
     })
   }
 
-  // Form vehículo
+  // Vehicle form
   const [form, setForm] = useState({
     make: "",
     model: "",
-    year: "",
-    plate: "",        // ← se mapeará a license_plate en el mutation
+    registration_date: "", // YYYY-MM-DD (derive year for backend)
+    plate: "", // maps to license_plate
     vin: "",
     hsn: "",
     tsn: "",
-    fuel_type: "Petrol",
-    drive: "FWD",
-    transmission: "Manual",
+    fuel_type: "",
+    drive: "",
+    transmission: "",
     km: "",
+    // NEW fields
+    tuv_date: "",            // YYYY-MM-DD -> DateTime?
+    last_service_date: "",   // YYYY-MM-DD -> DateTime?
   })
 
   const setField = (k: keyof typeof form, v: string) => setForm((s) => ({ ...s, [k]: v }))
@@ -135,6 +163,7 @@ export default function CreateVehicle() {
       const val = e.target.value.trim()
       setField(k, upper ? val.toUpperCase() : val)
     }
+  const onBlurPlate = (e: React.FocusEvent<HTMLInputElement>) => setField("plate", normalizePlate(e.target.value))
 
   const [createVehicle, { loading, error: mErr }] = useMutation(CREATE_VEHICLE, {
     refetchQueries: [{ query: GET_VEHICLES }],
@@ -149,18 +178,41 @@ export default function CreateVehicle() {
     },
   })
 
+  const validateDate = (yyyyMmDd: string, label: string, opts?: { required?: boolean }) => {
+    if (!yyyyMmDd) return opts?.required ? `${label} is required` : null
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(yyyyMmDd)) return `${label} must be YYYY-MM-DD`
+    const d = new Date(`${yyyyMmDd}T00:00:00Z`)
+    const year = d.getUTCFullYear()
+    if (isNaN(d.getTime())) return `Invalid ${label.toLowerCase()}`
+    if (year < 1950 || year > 2100) return `${label} must be between 1950 and 2100`
+    return null
+  }
+
   const validate = (): string | null => {
     if (!selectedClient) return "Client is required"
     if (!form.make.trim()) return "Make is required"
     if (!form.model.trim()) return "Model is required"
-    const yearN = Number(form.year)
-    if (!Number.isInteger(yearN) || yearN < 1950 || yearN > 2100) return "Year must be between 1950 and 2100"
-    if (!/^[A-Za-z0-9\- ]{3,15}$/.test(form.plate.trim())) return "Invalid license plate"
+
+    // Registration date (required) -> derive year
+    const regErr = validateDate(form.registration_date, "Registration date", { required: true })
+    if (regErr) return regErr
+
+    // Optional dates (TÜV & last service)
+    const tuvErr = form.tuv_date ? validateDate(form.tuv_date, "TÜV/Inspection date") : null
+    if (tuvErr) return tuvErr
+    const lastServErr = form.last_service_date ? validateDate(form.last_service_date, "Last service date") : null
+    if (lastServErr) return lastServErr
+
+    if (!/^[A-Za-z0-9\- ]{4,12}$/.test(form.plate.trim())) return "Invalid license plate (4–12, letters/numbers, spaces or hyphens)"
     if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(form.vin.trim().toUpperCase())) return "Invalid VIN (17 chars, no I/O/Q)"
-    if (!/^[0-9A-Za-z]{3,4}$/.test(form.hsn.trim())) return "HSN must be 3–4 alphanumerics"
-    if (!/^[A-Za-z0-9]{3}$/.test(form.tsn.trim())) return "TSN must be 3 alphanumerics"
+    if (!/^[0-9A-Za-z]{4}$/.test(form.hsn.trim())) return "HSN must be exactly 4 alphanumerics"
+    if (!/^[A-Za-z0-9]{3}$/.test(form.tsn.trim())) return "TSN must be exactly 3 alphanumerics"
+    if (!form.fuel_type) return "Fuel type is required"
+    if (!form.drive) return "Drive is required"
+    if (!form.transmission) return "Transmission is required"
+
     const kmN = Number(form.km)
-    if (!Number.isInteger(kmN) || kmN < 0) return "KM must be a non-negative integer"
+    if (!Number.isInteger(kmN) || kmN < 0) return "Mileage must be a non-negative integer"
     return null
   }
 
@@ -173,30 +225,35 @@ export default function CreateVehicle() {
     }
     setErr(null)
 
+    const year = new Date(`${form.registration_date}T00:00:00Z`).getUTCFullYear()
+
     await createVehicle({
       variables: {
         client_id: selectedClient!.client_id,
         make: form.make.trim(),
         model: form.model.trim(),
-        year: Number(form.year),
-        license_plate: form.plate.trim().toUpperCase(), // ← mapeo correcto
+        year, // derived from registration_date
+        license_plate: normalizePlate(form.plate),
         vin: form.vin.trim().toUpperCase(),
-        hsn: form.hsn.trim(),
+        hsn: form.hsn.trim().toUpperCase(),
         tsn: form.tsn.trim().toUpperCase(),
         fuel_type: form.fuel_type,
         drive: form.drive,
         transmission: form.transmission,
         km: Number(form.km),
+        // NEW optional dates — only send if valid
+        ...(form.tuv_date ? { tuv_date: toISODateOrNull(form.tuv_date) } : {}),
+        ...(form.last_service_date ? { last_service_date: toISODateOrNull(form.last_service_date) } : {}),
       },
     })
   }
 
-  // ---------- UI (alineado con CreateClient) ----------
+  // ---------- UI ----------
   return (
     <div className="max-w-2xl">
       <h1 className="text-2xl font-semibold mb-4">New vehicle</h1>
 
-      {/* Picker de cliente */}
+      {/* Client picker */}
       <div className="mb-4">
         {!pickerOpen && selectedClient ? (
           <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-900 border border-zinc-800">
@@ -258,12 +315,12 @@ export default function CreateVehicle() {
       </div>
 
       {(err || mErr) && (
-        <div className="mb-3 rounded-xl bg-red-800/40 border border-red-700 px-3 py-2 text-sm" role="alert">
+        <div className="mb-3 rounded-xl bg-red-800/40 border border-red-700 px-3 py-2 text-sm" role="alert" aria-live="assertive">
           {err || mErr?.message}
         </div>
       )}
 
-      {/* Form vehículo */}
+      {/* Vehicle form */}
       <form onSubmit={onSubmit} className="grid gap-3" noValidate>
         <div className="grid md:grid-cols-2 gap-3">
           <div>
@@ -300,21 +357,37 @@ export default function CreateVehicle() {
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm mb-1" htmlFor="year">Year *</label>
-          <input
-            id="year"
-            name="year"
-            value={form.year}
-            onChange={onChange("year")}
-            className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
-            placeholder="e.g. 2018"
-            type="number"
-            inputMode="numeric"
-            min={1950}
-            max={2100}
-            required
-          />
+        <div className="grid md:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm mb-1" htmlFor="registration_date">Registration date *</label>
+            <input
+              id="registration_date"
+              name="registration_date"
+              value={form.registration_date}
+              onChange={onChange("registration_date")}
+              className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
+              type="date"
+              min="1950-01-01"
+              max="2100-12-31"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm mb-1" htmlFor="km">Mileage (km) *</label>
+            <input
+              id="km"
+              name="km"
+              value={form.km}
+              onChange={onChange("km")}
+              className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
+              placeholder="e.g. 68000"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              required
+            />
+          </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-3">
@@ -325,13 +398,13 @@ export default function CreateVehicle() {
               name="plate"
               value={form.plate}
               onChange={onChange("plate")}
-              onBlur={onBlurTrim("plate", true)}
+              onBlur={onBlurPlate}
               className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
               placeholder="e.g. B-AB 1234"
               type="text"
               inputMode="text"
-              maxLength={15}
-              pattern="^[A-Za-z0-9\- ]{3,15}$"
+              maxLength={12}
+              pattern="^[A-Za-z0-9\\- ]{4,12}$"
               required
             />
           </div>
@@ -362,13 +435,13 @@ export default function CreateVehicle() {
               name="hsn"
               value={form.hsn}
               onChange={onChange("hsn")}
-              onBlur={onBlurTrim("hsn")}
+              onBlur={onBlurTrim("hsn", true)}
               className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
               placeholder="e.g. 0603"
               type="text"
               inputMode="text"
               maxLength={4}
-              pattern="^[0-9A-Za-z]{3,4}$"
+              pattern="^[0-9A-Za-z]{4}$"
               required
             />
           </div>
@@ -390,18 +463,17 @@ export default function CreateVehicle() {
             />
           </div>
           <div>
-            <label className="block text-sm mb-1" htmlFor="km">KM *</label>
+            <label className="block text-sm mb-1" htmlFor="tuv_date">TÜV / Inspection date</label>
             <input
-              id="km"
-              name="km"
-              value={form.km}
-              onChange={onChange("km")}
+              id="tuv_date"
+              name="tuv_date"
+              value={form.tuv_date}
+              onChange={onChange("tuv_date")}
               className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
-              placeholder="e.g. 68000"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              required
+              type="date"
+              min="2000-01-01"
+              max="2100-12-31"
+              placeholder="YYYY-MM-DD"
             />
           </div>
         </div>
@@ -417,11 +489,10 @@ export default function CreateVehicle() {
               className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
               required
             >
-              <option value="Petrol">Petrol</option>
-              <option value="Diesel">Diesel</option>
-              <option value="Hybrid">Hybrid</option>
-              <option value="Electric">Electric</option>
-              <option value="LPG">LPG</option>
+              <option value="">— Select —</option>
+              {FUEL_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
             </select>
           </div>
           <div>
@@ -434,10 +505,10 @@ export default function CreateVehicle() {
               className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
               required
             >
-              <option value="FWD">FWD</option>
-              <option value="RWD">RWD</option>
-              <option value="AWD">AWD</option>
-              <option value="4WD">4WD</option>
+              <option value="">— Select —</option>
+              {DRIVE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
             </select>
           </div>
           <div>
@@ -450,11 +521,30 @@ export default function CreateVehicle() {
               className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
               required
             >
-              <option value="Manual">Manual</option>
-              <option value="Automatic">Automatic</option>
-              <option value="CVT">CVT</option>
+              <option value="">— Select —</option>
+              {TRANSMISSION_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
             </select>
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm mb-1" htmlFor="last_service_date">Last service date</label>
+          <input
+            id="last_service_date"
+            name="last_service_date"
+            value={form.last_service_date}
+            onChange={onChange("last_service_date")}
+            className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
+            type="date"
+            min="2000-01-01"
+            max="2100-12-31"
+            placeholder="YYYY-MM-DD"
+          />
+          <p className="text-xs text-zinc-400 mt-1">
+            Optional. Helps the workshop plan next maintenance.
+          </p>
         </div>
 
         <div className="flex gap-2 mt-2">

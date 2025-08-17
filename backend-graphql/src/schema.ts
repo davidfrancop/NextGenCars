@@ -51,12 +51,15 @@ export const schema = createSchema<Context>({
       license_plate: String!
       vin: String!
       created_at: String
+      updated_at: String
       hsn: String!          # ← NOT NULL en DB
       tsn: String!          # ← NOT NULL en DB
       fuel_type: String!    # ← NOT NULL en DB
       drive: String!        # ← NOT NULL en DB
       transmission: String! # ← NOT NULL en DB
       km: Int!              # ← NOT NULL en DB
+      tuv_date: String      # ← DateTime? en DB, expuesto como String ISO
+      last_service_date: String # ← DateTime? en DB, expuesto como String ISO
       client: Client
     }
 
@@ -143,6 +146,7 @@ export const schema = createSchema<Context>({
 
       # Vehicles
       vehicles: [Vehicle!]!
+      vehicle(vehicle_id: Int!): Vehicle
     }
 
     type Mutation {
@@ -173,6 +177,29 @@ export const schema = createSchema<Context>({
         drive: String!
         transmission: String!
         km: Int!
+        # Opcionales nuevos:
+        tuv_date: String
+        last_service_date: String
+      ): Vehicle!
+
+      updateVehicle(
+        vehicle_id: Int!
+        make: String
+        model: String
+        year: Int
+        # Aceptamos ambos alias por compatibilidad:
+        license_plate: String
+        plate: String
+        vin: String
+        hsn: String
+        tsn: String
+        fuel_type: String
+        drive: String
+        transmission: String
+        km: Int
+        # Opcionales nuevos:
+        tuv_date: String
+        last_service_date: String
       ): Vehicle!
 
       deleteVehicle(vehicleId: Int!): Boolean!
