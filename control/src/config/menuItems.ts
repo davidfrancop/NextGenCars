@@ -3,8 +3,10 @@
 import type { ComponentType } from "react"
 import {
   Home,
+  UserCog,
   Users,
   Car,
+  CarFront,
   Calendar,
   ClipboardList,
   FileText,
@@ -29,11 +31,11 @@ export const menuItems: MenuItem[] = [
   { label: "Dashboard", path: "/dashboard", roles: ["admin", "frontdesk", "mechanic"], icon: Home },
 
   // Users → solo admin
-  { label: "Users", path: "/users", roles: ["admin"], icon: Users },
+  { label: "Users", path: "/users", roles: ["admin"], icon: UserCog },
 
   // Frontdesk sí tiene acceso
   { label: "Clients", path: "/clients", roles: ["admin", "frontdesk"], icon: Users },
-  { label: "Vehicles", path: "/vehicles", roles: ["admin", "frontdesk", "mechanic"], icon: Car },
+  { label: "Vehicles", path: "/vehicles", roles: ["admin", "frontdesk", "mechanic"], icon: CarFront },
   { label: "Appointments", path: "/appointments", roles: ["admin", "frontdesk"], icon: Calendar },
   { label: "Work Orders", path: "/workorders", roles: ["admin", "frontdesk", "mechanic"], icon: ClipboardList },
 

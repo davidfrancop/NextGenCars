@@ -5,7 +5,7 @@ import { Link } from "react-router-dom"
 import { useState } from "react"
 import { GET_VEHICLES } from "@/graphql/queries/getVehicles"
 import { DELETE_VEHICLE } from "@/graphql/mutations/deleteVehicle"
-import { Car, Pencil, Trash2, Plus } from "lucide-react"
+import { Car, CarFront, Pencil, Trash2, Plus } from "lucide-react"
 
 function Toast({ kind = "success", msg }: { kind?: "success" | "error"; msg: string }) {
   return (
@@ -93,7 +93,7 @@ export default function Vehicles() {
     <div className="p-6 text-white max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold flex items-center gap-2">
-          <Car size={26} />
+          <CarFront size={26} />
           Vehicles
         </h1>
         <Link

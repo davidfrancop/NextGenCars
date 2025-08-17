@@ -3,6 +3,7 @@
 import { Link } from "react-router-dom"
 import {
   Users,
+  UserCog,
   Settings as SettingsIcon,
   FileText,
   ClipboardList,
@@ -16,7 +17,7 @@ export default function Settings() {
     {
       label: "User Management",
       description: "Crear, editar o eliminar usuarios del sistema.",
-      icon: <Users size={20} />,
+      icon: <UserCog size={20} />,
       to: "/users",
     },
     {
