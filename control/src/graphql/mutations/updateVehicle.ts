@@ -8,7 +8,7 @@ export const UPDATE_VEHICLE = gql`
     $make: String
     $model: String
     $year: Int
-    $plate: String
+    $license_plate: String
     $vin: String
     $hsn: String
     $tsn: String
@@ -24,7 +24,7 @@ export const UPDATE_VEHICLE = gql`
       make: $make
       model: $model
       year: $year
-      plate: $plate
+      license_plate: $license_plate
       vin: $vin
       hsn: $hsn
       tsn: $tsn

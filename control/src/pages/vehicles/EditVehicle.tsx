@@ -35,26 +35,18 @@ const normalizePlate = (v: string) => v.toUpperCase().replace(/\s+/g, " ").trim(
 
 const toISODateOrNull = (yyyyMmDd: string) => {
   if (!yyyyMmDd) return null
-  // Force UTC midnight to avoid TZ shifts
-  const d = new Date(`${yyyyMmDd}T00:00:00Z`)
+  const d = new Date(`${yyyyMmDd}T00:00:00Z`) // force UTC midnight
   return isNaN(d.getTime()) ? null : d.toISOString()
 }
 
-// NEW: robust parser that accepts ISO or epoch milliseconds (string or number)
+// Accepts ISO or epoch (string/number) and formats YYYY-MM-DD for <input type="date">
 const isoToYyyyMmDd = (raw?: string | number | null) => {
   if (raw == null || raw === "") return ""
-  // Already YYYY-MM-DD
   if (typeof raw === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
-
   let d: Date
-  if (typeof raw === "number") {
-    d = new Date(raw)
-  } else if (/^\d+$/.test(raw)) {
-    // "1767830400000"
-    d = new Date(Number(raw))
-  } else {
-    d = new Date(raw)
-  }
+  if (typeof raw === "number") d = new Date(raw)
+  else if (/^\d+$/.test(raw)) d = new Date(Number(raw))
+  else d = new Date(raw)
   if (isNaN(d.getTime())) return ""
   const mm = String(d.getUTCMonth() + 1).padStart(2, "0")
   const dd = String(d.getUTCDate()).padStart(2, "0")
@@ -78,8 +70,8 @@ const TRANSMISSION_OPTIONS = ["Manual", "Automatic", "CVT", "DCT", "Semi-automat
 type FormState = {
   make: string
   model: string
-  registration_date: string // YYYY-MM-DD (UI-only; derives year)
-  plate: string
+  registration_date: string      // UI full date; backend stores only year
+  license_plate: string
   vin: string
   hsn?: string
   tsn?: string
@@ -87,12 +79,11 @@ type FormState = {
   drive?: string
   transmission?: string
   km?: string
-  tuv_date?: string        // YYYY-MM-DD
-  last_service_date?: string // YYYY-MM-DD
+  tuv_date?: string             // YYYY-MM-DD
+  last_service_date?: string    // YYYY-MM-DD
 }
 
 export default function EditVehicle() {
-  // Supports /vehicles/:vehicleId/edit or /vehicles/edit/:id
   const params = useParams<{ vehicleId?: string; id?: string }>()
   const idStr = params.vehicleId ?? params.id
   const id = idStr ? Number(idStr) : NaN
@@ -122,7 +113,7 @@ export default function EditVehicle() {
     make: "",
     model: "",
     registration_date: "",
-    plate: "",
+    license_plate: "",
     vin: "",
     hsn: "",
     tsn: "",
@@ -134,10 +125,10 @@ export default function EditVehicle() {
     last_service_date: "",
   })
 
-  const [errors, setErrors] = useState<{ plate?: string; registration_date?: string; vin?: string }>({})
+  const [errors, setErrors] = useState<{ license_plate?: string; registration_date?: string; vin?: string }>({})
   const [toast, setToast] = useState<{ kind: ToastKind; msg: string } | null>(null)
 
-  // Refs for accessible focus
+  // Refs for a11y focus
   const plateRef = useRef<HTMLInputElement>(null)
   const regDateRef = useRef<HTMLInputElement>(null)
   const vinRef = useRef<HTMLInputElement>(null)
@@ -145,16 +136,15 @@ export default function EditVehicle() {
   const toastRef = useRef<HTMLDivElement>(null)
   const [submitAttempted, setSubmitAttempted] = useState(false)
 
-  // Populate form when vehicle arrives
+  // Populate form values
   useEffect(() => {
     const v = data?.vehicle
     if (!v) return
     setForm({
       make: v.make ?? "",
       model: v.model ?? "",
-      // Backend stores only year; default UI date to Jan-01 of that year
       registration_date: v.year ? `${v.year}-01-01` : "",
-      plate: (v.plate ?? v.license_plate ?? "").toString(),
+      license_plate: v.license_plate ?? "",
       vin: v.vin ?? "",
       hsn: v.hsn ?? "",
       tsn: v.tsn ?? "",
@@ -162,7 +152,6 @@ export default function EditVehicle() {
       drive: v.drive ?? "",
       transmission: v.transmission ?? "",
       km: v.km?.toString() ?? "",
-      // Robust parse (ISO or epoch string/number)
       tuv_date: isoToYyyyMmDd(v.tuv_date as any),
       last_service_date: isoToYyyyMmDd(v.last_service_date as any),
     })
@@ -172,18 +161,16 @@ export default function EditVehicle() {
     (field: keyof FormState) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       let val = e.target.value
-      if (field === "plate") val = normalizePlate(val)
+      if (field === "license_plate") val = normalizePlate(val)
       setForm((f) => ({ ...f, [field]: val }))
     }
 
-  // Validate fields (client-side)
+  // Client-side validations
   useEffect(() => {
     const e: typeof errors = {}
-
-    if (form.plate && !plateRegex.test(form.plate)) {
-      e.plate = "Invalid format. Use letters/numbers, spaces or hyphens (4–12)."
+    if (form.license_plate && !plateRegex.test(form.license_plate)) {
+      e.license_plate = "Invalid format. Use letters/numbers, spaces or hyphens (4–12)."
     }
-
     if (form.registration_date) {
       const d = new Date(form.registration_date)
       const okFormat = /^\d{4}-\d{2}-\d{2}$/.test(form.registration_date)
@@ -194,18 +181,16 @@ export default function EditVehicle() {
         e.registration_date = "Year must be between 1950 and 2100."
       }
     }
-
     if (form.vin && form.vin.length < 11) {
       e.vin = "VIN too short."
     }
-
     setErrors(e)
-  }, [form.plate, form.registration_date, form.vin])
+  }, [form.license_plate, form.registration_date, form.vin])
 
   const canSubmit = useMemo(() => Object.keys(errors).length === 0, [errors])
 
   const focusFirstError = () => {
-    if (errors.plate) return plateRef.current?.focus()
+    if (errors.license_plate) return plateRef.current?.focus()
     if (errors.registration_date) return regDateRef.current?.focus()
     if (errors.vin) return vinRef.current?.focus()
   }
@@ -220,8 +205,6 @@ export default function EditVehicle() {
       }, 0)
       return
     }
-
-    // Derive year from full date for backend
     const year = form.registration_date ? new Date(form.registration_date).getUTCFullYear() : undefined
 
     await updateVehicle({
@@ -230,8 +213,7 @@ export default function EditVehicle() {
         make: form.make || undefined,
         model: form.model || undefined,
         year: typeof year === "number" ? year : undefined,
-        // backend accepts 'plate' (alias) or license_plate; we send plate
-        plate: form.plate || undefined,
+        license_plate: form.license_plate || undefined,
         vin: form.vin || undefined,
         hsn: form.hsn || undefined,
         tsn: form.tsn || undefined,
@@ -239,7 +221,6 @@ export default function EditVehicle() {
         drive: form.drive || undefined,
         transmission: form.transmission || undefined,
         km: form.km ? Number(form.km) : undefined,
-        // Dates — send ISO midnight UTC or undefined
         tuv_date: form.tuv_date ? toISODateOrNull(form.tuv_date) : undefined,
         last_service_date: form.last_service_date ? toISODateOrNull(form.last_service_date) : undefined,
       },
@@ -259,42 +240,15 @@ export default function EditVehicle() {
       </div>
     )
   }
-
-  if (qLoading) {
-    return (
-      <p className="text-gray-200 p-6" role="status" aria-live="polite">
-        Loading vehicle…
-      </p>
-    )
-  }
-
-  if (qError) {
-    return (
-      <p className="text-red-500 p-6" role="alert" aria-live="assertive">
-        Error: {qError.message}
-      </p>
-    )
-  }
-
-  if (!data?.vehicle) {
-    return (
-      <div className="p-6 text-white">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-          <p className="text-zinc-300">Vehicle not found.</p>
-          <Link to="/vehicles" className="underline text-indigo-300 mt-2 inline-block">
-            Back to vehicles
-          </Link>
-        </div>
-      </div>
-    )
-  }
+  if (qLoading) return <p className="p-6 text-gray-300">Loading…</p>
+  if (qError) return <p className="p-6 text-red-500">Error: {qError.message}</p>
+  if (!data?.vehicle) return <p className="p-6 text-gray-300">Vehicle not found.</p>
 
   const hasErrors = Object.keys(errors).length > 0
 
-  // Ensure current values appear in selects even if not in defaults
+  // Ensure current values appear in selects even if not in default lists
   const ensureOption = (list: readonly string[], value?: string) =>
     value && !list.includes(value) ? [value, ...list] : [...list]
-
   const fuelOptions = ensureOption(FUEL_OPTIONS, form.fuel_type)
   const driveOptions = ensureOption(DRIVE_OPTIONS, form.drive)
   const transmissionOptions = ensureOption(TRANSMISSION_OPTIONS, form.transmission)
@@ -314,17 +268,17 @@ export default function EditVehicle() {
         >
           <p className="font-semibold">Please review the following fields:</p>
           <ul className="list-disc ml-5 text-sm mt-1">
-            {errors.plate && (
+            {errors.license_plate && (
               <li>
                 <a
-                  href="#plate"
+                  href="#license_plate"
                   className="underline"
                   onClick={(e) => {
                     e.preventDefault()
                     plateRef.current?.focus()
                   }}
                 >
-                  Plate: {errors.plate}
+                  License plate: {errors.license_plate}
                 </a>
               </li>
             )}
@@ -419,30 +373,30 @@ export default function EditVehicle() {
             )}
           </div>
 
-          {/* Plate */}
+          {/* License plate */}
           <div>
-            <label className="block text-sm mb-1" htmlFor="plate">
-              Plate <span className="sr-only">(required)</span> *
+            <label className="block text-sm mb-1" htmlFor="license_plate">
+              License plate <span className="sr-only">(required)</span> *
             </label>
             <input
-              id="plate"
-              name="plate"
+              id="license_plate"
+              name="license_plate"
               ref={plateRef}
               type="text"
               aria-required="true"
               required
-              aria-invalid={!!errors.plate}
-              aria-describedby={`${errors.plate ? "plate-error " : ""}plate-help`}
-              value={form.plate}
-              onChange={onChange("plate")}
+              aria-invalid={!!errors.license_plate}
+              aria-describedby={`${errors.license_plate ? "license_plate-error " : ""}license_plate-help`}
+              value={form.license_plate}
+              onChange={onChange("license_plate")}
               className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
             />
-            <p id="plate-help" className="text-xs text-zinc-400 mt-1">
+            <p id="license_plate-help" className="text-xs text-zinc-400 mt-1">
               Use letters/numbers, spaces or hyphens (4–12).
             </p>
-            {errors.plate && (
-              <p id="plate-error" className="text-red-400 text-xs mt-1">
-                {errors.plate}
+            {errors.license_plate && (
+              <p id="license_plate-error" className="text-red-400 text-xs mt-1">
+                {errors.license_plate}
               </p>
             )}
           </div>
@@ -469,6 +423,38 @@ export default function EditVehicle() {
                 {errors.vin}
               </p>
             )}
+          </div>
+
+          {/* HSN */}
+          <div>
+            <label className="block text-sm mb-1" htmlFor="hsn">
+              HSN
+            </label>
+            <input
+              id="hsn"
+              name="hsn"
+              type="text"
+              autoComplete="off"
+              value={form.hsn}
+              onChange={onChange("hsn")}
+              className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
+            />
+          </div>
+
+          {/* TSN */}
+          <div>
+            <label className="block text-sm mb-1" htmlFor="tsn">
+              TSN
+            </label>
+            <input
+              id="tsn"
+              name="tsn"
+              type="text"
+              autoComplete="off"
+              value={form.tsn}
+              onChange={onChange("tsn")}
+              className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
+            />
           </div>
 
           {/* Fuel type (select) */}

@@ -13,7 +13,7 @@ const isPlateFormatValid = (plate: string) =>
 
 const normalizeVIN = (raw?: string | null) => (raw ?? "").toUpperCase().trim()
 
-// 17 típico; aquí dejamos 11–20 por flexibilidad como en tu versión
+// 17 típico; dejamos 11–20 por flexibilidad
 const isVINLengthValid = (vin: string) => vin.length >= 11 && vin.length <= 20
 
 const isHSNValid = (hsn?: string | null) => !!hsn && /^[A-Z0-9]{4}$/.test(hsn.toUpperCase())
@@ -25,18 +25,39 @@ const isYearValid = (year?: number | null) =>
 const isKmValid = (km?: number | null) =>
   typeof km === "number" && km >= 0 && km <= 2_000_000
 
-const toDateOrUndefined = (iso?: string | null): Date | undefined => {
-  if (!iso) return undefined
-  const d = new Date(iso)
+// Entrada: String ISO o string numérico (epoch ms). Devuelve Date o undefined.
+const toDateOrUndefined = (raw?: string | null): Date | undefined => {
+  if (!raw) return undefined
+  let d: Date
+  if (/^\d+$/.test(raw)) d = new Date(Number(raw)) // "1767830400000"
+  else d = new Date(raw)
   return isNaN(d.getTime()) ? undefined : d
 }
 
+// Salida: normaliza Date | number | string a ISO; null si no válido
+const toIsoString = (v: any): string | null => {
+  if (!v) return null
+  if (v instanceof Date) return v.toISOString()
+  if (typeof v === "number") return new Date(v).toISOString()
+  if (typeof v === "string") {
+    if (/^\d+$/.test(v)) return new Date(Number(v)).toISOString()
+    const d = new Date(v)
+    return isNaN(d.getTime()) ? null : d.toISOString()
+  }
+  return null
+}
+
 export const vehicleResolvers = {
-  /* Campos de tipo (resuelven relaciones) */
+  /* Campos de tipo (resuelven relaciones y normalizan fechas) */
   Vehicle: {
     client: async (parent: { client_id: number }, _args: unknown, { db }: Context) => {
       return db.clients.findUnique({ where: { client_id: parent.client_id } })
     },
+    // ⬇️ Normalización de fechas a ISO en respuestas GraphQL
+    tuv_date: (parent: any) => toIsoString(parent?.tuv_date),
+    last_service_date: (parent: any) => toIsoString(parent?.last_service_date),
+    created_at: (parent: any) => toIsoString(parent?.created_at),
+    updated_at: (parent: any) => toIsoString(parent?.updated_at),
   },
 
   Query: {
@@ -71,7 +92,6 @@ export const vehicleResolvers = {
         drive: string
         transmission: string
         km: number
-        // NUEVO: fechas opcionales
         tuv_date?: string | null
         last_service_date?: string | null
       },
@@ -103,7 +123,7 @@ export const vehicleResolvers = {
         throw new Error("KM inválido. Debe ser un número entre 0 y 2,000,000.")
       }
 
-      // Chequeos de unicidad
+      // Unicidad
       const [plateExists, vinExists] = await Promise.all([
         db.vehicles.findUnique({ where: { license_plate } }),
         db.vehicles.findUnique({ where: { vin } }),
@@ -126,7 +146,6 @@ export const vehicleResolvers = {
             drive: args.drive,
             transmission: args.transmission,
             km: args.km,
-            // NUEVO: conversión segura a Date (o undefined)
             tuv_date: toDateOrUndefined(args.tuv_date),
             last_service_date: toDateOrUndefined(args.last_service_date),
           },
@@ -149,7 +168,7 @@ export const vehicleResolvers = {
         make?: string
         model?: string
         year?: number
-        // Aceptamos alias 'plate' desde el front; Prisma usa 'license_plate'
+        // Alias 'plate' desde el front; Prisma usa 'license_plate'
         plate?: string
         license_plate?: string
         vin?: string
@@ -159,7 +178,6 @@ export const vehicleResolvers = {
         drive?: string
         transmission?: string
         km?: number
-        // NUEVO: fechas opcionales
         tuv_date?: string | null
         last_service_date?: string | null
       },
@@ -167,8 +185,7 @@ export const vehicleResolvers = {
     ) => {
       const { vehicle_id, ...rest } = args
 
-      // Normalizaciones + validaciones por campo (si vienen)
-      // Matrícula: soportar 'plate' o 'license_plate'
+      // Matrícula: soporta 'plate' o 'license_plate'
       const incomingPlate = rest.plate ?? rest.license_plate
       let license_plate: string | undefined
       if (typeof incomingPlate === "string") {
@@ -218,8 +235,9 @@ export const vehicleResolvers = {
         throw new Error("KM inválido. Debe ser un número entre 0 y 2,000,000.")
       }
 
-      // Fechas (aceptamos undefined/null -> se ignora; string -> convertimos)
-      const tuvDate = rest.tuv_date === undefined ? undefined : toDateOrUndefined(rest.tuv_date)
+      // Fechas (si vienen) — aceptan ISO y epoch ms (string)
+      const tuvDate =
+        rest.tuv_date === undefined ? undefined : toDateOrUndefined(rest.tuv_date)
       const lastServiceDate =
         rest.last_service_date === undefined ? undefined : toDateOrUndefined(rest.last_service_date)
 
@@ -227,7 +245,6 @@ export const vehicleResolvers = {
         const updated = await db.vehicles.update({
           where: { vehicle_id },
           data: {
-            // Campos simples (solo cuando vienen definidos)
             ...(rest.make !== undefined ? { make: rest.make?.trim() } : {}),
             ...(rest.model !== undefined ? { model: rest.model?.trim() } : {}),
             ...(rest.year !== undefined ? { year: rest.year } : {}),
@@ -235,14 +252,10 @@ export const vehicleResolvers = {
             ...(rest.fuel_type !== undefined ? { fuel_type: rest.fuel_type } : {}),
             ...(rest.drive !== undefined ? { drive: rest.drive } : {}),
             ...(rest.transmission !== undefined ? { transmission: rest.transmission } : {}),
-            // Matrícula normalizada
             ...(license_plate ? { license_plate } : {}),
-            // VIN normalizado
             ...(vin ? { vin } : {}),
-            // HSN/TSN normalizados
             ...(hsn ? { hsn } : {}),
             ...(tsn ? { tsn } : {}),
-            // Fechas (si se enviaron)
             ...(tuvDate !== undefined ? { tuv_date: tuvDate } : {}),
             ...(lastServiceDate !== undefined ? { last_service_date: lastServiceDate } : {}),
           },
