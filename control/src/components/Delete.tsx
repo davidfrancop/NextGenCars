@@ -1,3 +1,5 @@
+//control/src/components/Delete.tsx
+
 import { useState } from "react"
 import { Trash2 } from "lucide-react"
 import { useMutation, type DocumentNode } from "@apollo/client"
