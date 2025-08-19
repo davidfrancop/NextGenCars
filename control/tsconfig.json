@@ -6,10 +6,12 @@
     "moduleResolution": "Node",
     "strict": true,
     "jsx": "react-jsx",
+
     "baseUrl": "src",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["*"]
     },
+
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
