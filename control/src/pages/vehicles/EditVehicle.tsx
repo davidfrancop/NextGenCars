@@ -6,28 +6,7 @@ import { UPDATE_VEHICLE } from "@/graphql/mutations/updateVehicle"
 import { GET_VEHICLES } from "@/graphql/queries/getVehicles"
 import { useNavigate, useParams, Link } from "react-router-dom"
 import React, { useEffect, useMemo, useRef, useState } from "react"
-
-type ToastKind = "success" | "error"
-
-const Toast = React.forwardRef<HTMLDivElement, { kind?: ToastKind; msg: string }>(
-  ({ kind = "success", msg }, ref) => {
-    const isError = kind === "error"
-    return (
-      <div
-        ref={ref}
-        className={`fixed bottom-4 right-4 px-4 py-2 rounded-xl shadow-lg text-sm z-50 outline-none ${
-          isError ? "bg-red-700/90" : "bg-emerald-700/90"
-        }`}
-        role={isError ? "alert" : "status"}
-        aria-live={isError ? "assertive" : "polite"}
-        tabIndex={-1}
-      >
-        {msg}
-      </div>
-    )
-  }
-)
-Toast.displayName = "Toast"
+import Toast, { type ToastState } from "@/components/common/Toast" // ✅ usar Toast común
 
 // -------- helpers ----------
 const plateRegex = /^[A-Z0-9\- ]{4,12}$/
@@ -96,15 +75,16 @@ export default function EditVehicle() {
     fetchPolicy: "cache-and-network",
   })
 
+  const [toast, setToast] = useState<ToastState>(null) // ✅ usar estado del Toast común
+
   const [updateVehicle, { loading: mLoading }] = useMutation(UPDATE_VEHICLE, {
     onCompleted: () => {
-      setToast({ kind: "success", msg: "Vehicle updated" })
+      setToast({ type: "success", msg: "Vehicle updated" })
+      // El Toast común se autocierra; navegamos tras un breve delay
       setTimeout(() => navigate("/vehicles"), 600)
     },
     onError: (err) => {
-      setToast({ kind: "error", msg: err.message || "Failed to update" })
-      setTimeout(() => toastRef.current?.focus(), 50)
-      setTimeout(() => setToast(null), 1800)
+      setToast({ type: "error", msg: err.message || "Failed to update" })
     },
     refetchQueries: [{ query: GET_VEHICLES }],
   })
@@ -126,14 +106,12 @@ export default function EditVehicle() {
   })
 
   const [errors, setErrors] = useState<{ license_plate?: string; registration_date?: string; vin?: string }>({})
-  const [toast, setToast] = useState<{ kind: ToastKind; msg: string } | null>(null)
 
   // Refs for a11y focus
   const plateRef = useRef<HTMLInputElement>(null)
   const regDateRef = useRef<HTMLInputElement>(null)
   const vinRef = useRef<HTMLInputElement>(null)
   const errorSummaryRef = useRef<HTMLDivElement>(null)
-  const toastRef = useRef<HTMLDivElement>(null)
   const [submitAttempted, setSubmitAttempted] = useState(false)
 
   // Populate form values
@@ -594,7 +572,14 @@ export default function EditVehicle() {
         </div>
       </form>
 
-      {toast && <Toast ref={toastRef} kind={toast.kind} msg={toast.msg} />}
+      {/* ✅ Toast común: se auto-cierra y puedes limpiarlo con onClose */}
+      {toast && (
+        <Toast
+          type={toast.type}
+          msg={toast.msg}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   )
 }
