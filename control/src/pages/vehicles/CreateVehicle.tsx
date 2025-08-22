@@ -7,6 +7,7 @@ import { SEARCH_CLIENTS } from "@/graphql/queries/searchClients"
 import { GET_VEHICLES } from "@/graphql/queries/getVehicles"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
+import Toast, { type ToastState } from "@/components/common/Toast" // ✅ usa el toast común
 
 type ClientLite = {
   client_id: number
@@ -22,21 +23,6 @@ function displayClientName(c?: ClientLite | null) {
   if (c.type === "COMPANY") return c.company_name || `Company #${c.client_id}`
   const full = `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim()
   return full || `Client #${c.client_id}`
-}
-
-function Toast({ kind = "success", msg }: { kind?: "success" | "error"; msg: string }) {
-  const isError = kind === "error"
-  return (
-    <div
-      className={`fixed bottom-4 right-4 px-4 py-2 rounded-xl shadow-lg text-sm z-50 ${
-        isError ? "bg-red-700/90" : "bg-emerald-700/90"
-      }`}
-      role={isError ? "alert" : "status"}
-      aria-live={isError ? "assertive" : "polite"}
-    >
-      {msg}
-    </div>
-  )
 }
 
 // --- Helpers / constants ---
@@ -72,8 +58,8 @@ export default function CreateVehicle() {
   const [selectedClient, setSelectedClient] = useState<ClientLite | null>(null)
   const [pickerOpen, setPickerOpen] = useState<boolean>(!preId)
 
-  // Toast + local error
-  const [toast, setToast] = useState<{ kind: "success" | "error"; msg: string } | null>(null)
+  // ✅ Toast común
+  const [toast, setToast] = useState<ToastState>(null)
   const [err, setErr] = useState<string | null>(null)
 
   // Prefill client
@@ -169,12 +155,11 @@ export default function CreateVehicle() {
     refetchQueries: [{ query: GET_VEHICLES }],
     awaitRefetchQueries: true,
     onCompleted: () => {
-      setToast({ kind: "success", msg: "Vehicle created" })
+      setToast({ type: "success", msg: "Vehicle created" })
       setTimeout(() => navigate("/vehicles"), 850)
     },
     onError: (e) => {
-      setToast({ kind: "error", msg: e.message || "Failed to create vehicle" })
-      setTimeout(() => setToast(null), 2000)
+      setToast({ type: "error", msg: e.message || "Failed to create vehicle" })
     },
   })
 
@@ -565,7 +550,14 @@ export default function CreateVehicle() {
         </div>
       </form>
 
-      {toast && <Toast kind={toast.kind} msg={toast.msg} />}
+      {/* ✅ Toast común */}
+      {toast && (
+        <Toast
+          type={toast.type}
+          msg={toast.msg}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   )
 }
