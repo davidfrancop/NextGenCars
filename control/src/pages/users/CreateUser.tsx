@@ -6,23 +6,10 @@ import { useMutation } from "@apollo/client"
 import { ArrowLeft, Check } from "lucide-react"
 import { CREATE_USER } from "@/graphql/mutations/createUser"
 import { GET_USERS } from "@/graphql/queries/getUsers"
+import Toast, { type ToastState } from "@/components/common/Toast" // ✅ Toast común
 
 const roles = ["admin", "frontdesk", "mechanic"] as const
 type Role = typeof roles[number]
-type Toast = { type: "success" | "error"; msg: string } | null
-
-function ToastView({ kind = "success", msg }: { kind?: "success" | "error"; msg: string }) {
-  return (
-    <div
-      className={`fixed bottom-4 right-4 px-4 py-2 rounded-xl shadow-lg text-sm z-50 ${
-        kind === "success" ? "bg-emerald-700/90" : "bg-red-700/90"
-      }`}
-      role="status"
-    >
-      {msg}
-    </div>
-  )
-}
 
 export default function CreateUser() {
   const navigate = useNavigate()
@@ -35,12 +22,11 @@ export default function CreateUser() {
   })
   const [errors, setErrors] = useState<{ username?: string; email?: string; role?: string; password?: string }>({})
   const [err, setErr] = useState<string | null>(null)
-  const [toast, setToast] = useState<Toast>(null)
+  const [toast, setToast] = useState<ToastState>(null) // ✅ estado del toast común
 
   const emailRegex = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/, [])
 
   const [createUser, { loading, error: saveError }] = useMutation(CREATE_USER, {
-    // Mantenemos consistencia con EditClient/EditUser
     refetchQueries: [{ query: GET_USERS }],
     awaitRefetchQueries: true,
     onCompleted() {
@@ -54,7 +40,6 @@ export default function CreateUser() {
       }
       setErr(msg)
       setToast({ type: "error", msg })
-      setTimeout(() => setToast(null), 2000)
     },
   })
 
@@ -114,7 +99,11 @@ export default function CreateUser() {
       </div>
 
       {(err || saveError) && (
-        <div className="mb-3 rounded-xl bg-red-800/40 border border-red-700 px-3 py-2 text-sm" role="alert">
+        <div
+          className="mb-3 rounded-xl bg-red-800/40 border border-red-700 px-3 py-2 text-sm"
+          role="alert"
+          aria-live="assertive"
+        >
           {err || saveError?.message}
         </div>
       )}
@@ -230,7 +219,14 @@ export default function CreateUser() {
         </div>
       </form>
 
-      {toast && <ToastView kind={toast.type} msg={toast.msg} />}
+      {/* ✅ Toast común */}
+      {toast && (
+        <Toast
+          type={toast.type}
+          msg={toast.msg}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   )
 }
