@@ -1,4 +1,5 @@
 // control/src/components/common/Confirmation.tsx
+
 import { ReactNode } from "react"
 import { X } from "lucide-react"
 
@@ -8,6 +9,7 @@ type ConfirmDialogProps = {
   text?: ReactNode
   confirmText?: string
   cancelText?: string
+  extraButtons?: ReactNode   // 👈 opcional: para más botones (ej: "Move")
   onCancel: () => void
   onConfirm: () => void
   loading?: boolean
@@ -19,6 +21,7 @@ export default function ConfirmDialog({
   text,
   confirmText = "Confirm",
   cancelText = "Cancel",
+  extraButtons,              // 👈 puedes pasar cualquier botón extra
   onCancel,
   onConfirm,
   loading,
@@ -45,6 +48,7 @@ export default function ConfirmDialog({
         {text && <div className="text-sm text-slate-700 dark:text-slate-300 mb-4">{text}</div>}
 
         <div className="flex justify-end gap-2">
+          {extraButtons /* 👈 renderiza lo que pases, ej. otro botón */}
           <button
             className="px-3 py-1.5 rounded-md border border-slate-300 dark:border-slate-700"
             onClick={onCancel}
