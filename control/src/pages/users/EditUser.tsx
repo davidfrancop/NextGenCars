@@ -5,24 +5,10 @@ import { useNavigate, useParams } from "react-router-dom"
 import { useMutation, useQuery } from "@apollo/client"
 import { GET_USER, GET_USERS } from "@/graphql/queries/getUsers"
 import { UPDATE_USER } from "@/graphql/mutations/updateUser"
+import Toast, { type ToastState } from "@/components/common/Toast" // ✅ Toast común
 
 const roles = ["admin", "frontdesk", "mechanic"] as const
 type Role = typeof roles[number]
-
-type Toast = { type: "success" | "error"; msg: string } | null
-
-function ToastView({ kind = "success", msg }: { kind?: "success" | "error"; msg: string }) {
-  return (
-    <div
-      className={`fixed bottom-4 right-4 px-4 py-2 rounded-xl shadow-lg text-sm z-50 ${
-        kind === "success" ? "bg-emerald-700/90" : "bg-red-700/90"
-      }`}
-      role="status"
-    >
-      {msg}
-    </div>
-  )
-}
 
 export default function EditUser() {
   // Soporta rutas /users/:id/edit o /users/:userId/edit
@@ -44,11 +30,12 @@ export default function EditUser() {
     password: "",
   })
 
-  // Errores por campo (mantiene tu validación granular)
+  // Errores por campo
   const [errors, setErrors] = useState<{ username?: string; email?: string; role?: string; password?: string }>({})
-  // Error general de validación o de servidor (panel superior, igual a EditClient)
+  // Error general
   const [err, setErr] = useState<string | null>(null)
-  const [toast, setToast] = useState<Toast>(null)
+  // ✅ Estado del Toast común
+  const [toast, setToast] = useState<ToastState>(null)
 
   useEffect(() => {
     if (data?.user) {
@@ -63,7 +50,6 @@ export default function EditUser() {
   }, [data])
 
   const [updateUser, { loading: saving, error: saveError }] = useMutation(UPDATE_USER, {
-    // Para coherencia con EditClient, volvemos a usar refetchQueries
     refetchQueries: [{ query: GET_USERS }],
     awaitRefetchQueries: true,
     onCompleted: () => {
@@ -71,18 +57,13 @@ export default function EditUser() {
       setTimeout(() => navigate("/users"), 850)
     },
     onError: (e) => {
-      // Mostramos toast + panel superior
       const msg = e?.message || "Failed to update user"
-      // Mensaje específico por email duplicado
       if (/(ya está en uso|already.*in use|unique constraint)/i.test(msg)) {
         setErrors((cur) => ({ ...cur, email: "This email is already in use." }))
       }
       setErr(msg)
       setToast({ type: "error", msg })
-      setTimeout(() => setToast(null), 2000)
     },
-    // Si prefieres cache.writeQuery, puedes reactivar el update:
-    // update(cache, { data }) { ... }
   })
 
   const emailRegex = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/, [])
@@ -112,7 +93,6 @@ export default function EditUser() {
     })
   }
 
-  // Título bonito y <title> del navegador (igual patrón a EditClient)
   const getTitle = () => (form.username.trim() ? form.username.trim() : `User #${uid}`)
   useEffect(() => {
     if (isValidId) document.title = `Edit · ${getTitle()} · NextGen Cars`
@@ -129,7 +109,7 @@ export default function EditUser() {
       <h1 className="text-2xl font-semibold mb-4">{getTitle()}</h1>
 
       {(err || saveError) && (
-        <div className="mb-3 rounded-xl bg-red-800/40 border border-red-700 px-3 py-2 text-sm" role="alert">
+        <div className="mb-3 rounded-xl bg-red-800/40 border border-red-700 px-3 py-2 text-sm" role="alert" aria-live="assertive">
           {err || saveError?.message}
         </div>
       )}
@@ -239,7 +219,14 @@ export default function EditUser() {
         </div>
       </form>
 
-      {toast && <ToastView kind={toast.type} msg={toast.msg} />}
+      {/* ✅ Toast común */}
+      {toast && (
+        <Toast
+          type={toast.type}
+          msg={toast.msg}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   )
 }
