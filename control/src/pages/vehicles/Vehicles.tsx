@@ -1,116 +1,17 @@
 // control/src/pages/vehicles/Vehicles.tsx
 
-import { useQuery, useMutation } from "@apollo/client"
+import { useQuery } from "@apollo/client"
 import { Link, useNavigate } from "react-router-dom"
-import { useState, useCallback, useRef, useEffect } from "react"
 import { GET_VEHICLES } from "@/graphql/queries/getVehicles"
 import { DELETE_VEHICLE } from "@/graphql/mutations/deleteVehicle"
-import { CarFront, Pencil, Trash2, Plus } from "lucide-react"
-
-function Toast({ kind = "success", msg }: { kind?: "success" | "error"; msg: string }) {
-  const isError = kind === "error"
-  return (
-    <div
-      className={`fixed bottom-4 right-4 px-4 py-2 rounded-xl shadow-lg text-sm z-50 ${
-        isError ? "bg-red-700/90" : "bg-emerald-700/90"
-      }`}
-      role={isError ? "alert" : "status"}
-      aria-live={isError ? "assertive" : "polite"}
-    >
-      {msg}
-    </div>
-  )
-}
-
-function ConfirmDialog({
-  open,
-  title,
-  text,
-  onCancel,
-  onConfirm,
-}: {
-  open: boolean
-  title: string
-  text: string
-  onCancel: () => void
-  onConfirm: () => void
-}) {
-  const cancelRef = useRef<HTMLButtonElement>(null)
-
-  useEffect(() => {
-    if (open) {
-      // focus inicial para accesibilidad
-      cancelRef.current?.focus()
-    }
-  }, [open])
-
-  if (!open) return null
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-title"
-      aria-describedby="confirm-text"
-    >
-      <div className="absolute inset-0 bg-black/50" onClick={onCancel} role="presentation" />
-      <div className="relative w-full max-w-md rounded-2xl bg-zinc-900 border border-zinc-800 p-5 shadow-xl">
-        <h3 id="confirm-title" className="text-lg font-semibold mb-2">
-          {title}
-        </h3>
-        <p id="confirm-text" className="text-sm text-zinc-300 mb-4">
-          {text}
-        </p>
-        <div className="flex justify-end gap-2">
-          <button
-            ref={cancelRef}
-            className="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            className="px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500"
-            onClick={onConfirm}
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
+import { CarFront, Pencil, Plus } from "lucide-react"
+import Delete from "@/components/common/Delete" // ✅ usa el Delete genérico (confirm + toast internos)
 
 export default function Vehicles() {
   const navigate = useNavigate()
-  const { data, loading, error, refetch } = useQuery(GET_VEHICLES)
-
-  const [toast, setToast] = useState<{ kind: "success" | "error"; msg: string } | null>(null)
-  const [confirm, setConfirm] = useState<{ open: boolean; id: number | null }>({ open: false, id: null })
-
-  const [deleteVehicle, { loading: deleting }] = useMutation(DELETE_VEHICLE, {
-    onCompleted: async () => {
-      await refetch()
-      setToast({ kind: "success", msg: "Vehicle deleted" })
-      setTimeout(() => setToast(null), 1200)
-    },
-    onError: (err) => {
-      setToast({ kind: "error", msg: err.message || "Failed to delete vehicle" })
-      setTimeout(() => setToast(null), 2000)
-    },
+  const { data, loading, error, refetch } = useQuery(GET_VEHICLES, {
+    fetchPolicy: "cache-and-network",
   })
-
-  const askDelete = useCallback((vehicleId: number) => {
-    setConfirm({ open: true, id: vehicleId })
-  }, [])
-
-  const doDelete = useCallback(() => {
-    if (confirm.id == null) return
-    deleteVehicle({ variables: { vehicleId: confirm.id } })
-    setConfirm({ open: false, id: null })
-  }, [confirm.id, deleteVehicle])
-
-  const closeConfirm = useCallback(() => setConfirm({ open: false, id: null }), [])
 
   if (loading) {
     return (
@@ -184,11 +85,12 @@ export default function Vehicles() {
                   (v.client?.company_name ??
                     [v.client?.first_name, v.client?.last_name].filter(Boolean).join(" ")) || "—"
                 const plate = v.plate ?? v.license_plate
+
                 return (
                   <tr
                     key={v.vehicle_id}
                     className={`border-b border-zinc-800 hover:bg-zinc-800/40 transition ${isLast ? "last:border-b-0" : ""}`}
-                    onClick={() => navigate(`/vehicles/${v.vehicle_id}/edit`)} // ← ruta correcta
+                    onClick={() => navigate(`/vehicles/${v.vehicle_id}/edit`)}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => {
@@ -208,7 +110,7 @@ export default function Vehicles() {
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-3 justify-end">
                         <Link
-                          to={`/vehicles/${v.vehicle_id}/edit`} // ← corregido (no /dashboard ni /vehicles/edit/:id)
+                          to={`/vehicles/${v.vehicle_id}/edit`}
                           onClick={(e) => e.stopPropagation()}
                           className="inline-flex text-amber-400 hover:text-amber-300"
                           title="Edit vehicle"
@@ -216,18 +118,23 @@ export default function Vehicles() {
                         >
                           <Pencil size={18} />
                         </Link>
-                        <button
+
+                        {/* ✅ Delete genérico con confirm + toast */}
+                        <Delete
+                          mutation={DELETE_VEHICLE}
+                          // Ajusta el nombre de variable a tu schema: vehicleId vs vehicle_id
+                          variables={{ vehicleId: v.vehicle_id }}
+                          text={
+                            <span>
+                              Delete vehicle <strong>{plate || v.vehicle_id}</strong>? This action cannot be undone.
+                            </span>
+                          }
+                          successMessage="Vehicle deleted"
+                          errorMessage="Failed to delete vehicle"
+                          onCompleted={refetch}
+                          iconOnly
                           className="inline-flex text-red-500 hover:text-red-400 disabled:opacity-50"
-                          title="Delete vehicle"
-                          aria-label={`Delete vehicle ${plate}`}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            askDelete(v.vehicle_id)
-                          }}
-                          disabled={deleting}
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        />
                       </div>
                     </td>
                   </tr>
@@ -237,16 +144,6 @@ export default function Vehicles() {
           </table>
         </div>
       )}
-
-      <ConfirmDialog
-        open={confirm.open}
-        title="Delete vehicle"
-        text="This action cannot be undone. Do you want to delete this vehicle?"
-        onCancel={closeConfirm}
-        onConfirm={doDelete}
-      />
-
-      {toast && <Toast kind={toast.kind} msg={toast.msg} />}
     </div>
   )
 }
