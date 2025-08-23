@@ -181,12 +181,11 @@ export const schema = createSchema<Context>({
 
       updateVehicle(
         vehicle_id: Int!
-        # allow re-assignment to another client
-        client_id: Int
+        client_id: Int          # ← allow re-assigning the vehicle to another client
         make: String
         model: String
         year: Int
-        # keep both aliases for compatibility
+        # compatibility alias:
         license_plate: String
         plate: String
         vin: String
