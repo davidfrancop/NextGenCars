@@ -5,7 +5,7 @@ import { gql } from "@apollo/client"
 export const UPDATE_VEHICLE = gql`
   mutation UpdateVehicle(
     $vehicle_id: Int!
-    $client_id: Int          # 👈 añadido
+    $client_id: Int
     $make: String
     $model: String
     $year: Int
@@ -22,7 +22,7 @@ export const UPDATE_VEHICLE = gql`
   ) {
     updateVehicle(
       vehicle_id: $vehicle_id
-      client_id: $client_id   # 👈 añadido
+      client_id: $client_id
       make: $make
       model: $model
       year: $year
