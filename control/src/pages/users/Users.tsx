@@ -7,6 +7,31 @@ import { DELETE_USER } from "@/graphql/mutations/deleteUser"
 import { Users as UsersIcon, Pencil, Plus } from "lucide-react"
 import Delete from "@/components/common/Delete"
 
+function RoleBadge({ role }: { role: string }) {
+  switch (role) {
+    case "admin":
+      return (
+        <span className="text-xs px-2 py-0.5 rounded-full bg-rose-900/40 border border-rose-800 text-rose-200">
+          ADMIN
+        </span>
+      )
+    case "frontdesk":
+      return (
+        <span className="text-xs px-2 py-0.5 rounded-full bg-sky-900/40 border border-sky-800 text-sky-200">
+          FRONTDESK
+        </span>
+      )
+    case "mechanic":
+      return (
+        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-900/40 border border-amber-800 text-amber-200">
+          MECHANIC
+        </span>
+      )
+    default:
+      return <span className="text-xs text-zinc-400">{role}</span>
+  }
+}
+
 export default function Users() {
   const { data, loading, error, refetch } = useQuery(GET_USERS)
 
@@ -54,7 +79,9 @@ export default function Users() {
                 >
                   <td className="px-4 py-2">{u.username}</td>
                   <td className="px-4 py-2">{u.email}</td>
-                  <td className="px-4 py-2">{u.role}</td>
+                  <td className="px-4 py-2">
+                    <RoleBadge role={u.role} />
+                  </td>
                   <td className="px-4 py-2">
                     {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}
                   </td>
