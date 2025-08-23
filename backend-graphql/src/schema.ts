@@ -181,6 +181,7 @@ export const schema = createSchema<Context>({
 
       updateVehicle(
         vehicle_id: Int!
+        client_id: Int          # 👈 añadido para permitir reasignar vehículo
         make: String
         model: String
         year: Int

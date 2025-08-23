@@ -1,3 +1,5 @@
+// control/src/utils/Date.ts
+
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
@@ -47,6 +49,19 @@ export function isoToYyyyMmDd(raw?: string | number | null): string {
   else if (/^\d+$/.test(String(raw))) d = new Date(Number(raw))
   else d = new Date(raw)
   if (isNaN(d.getTime())) return ""
+  const mm = String(d.getMonth() + 1).padStart(2, "0")
+  const dd = String(d.getDate()).padStart(2, "0")
+  return `${d.getFullYear()}-${mm}-${dd}`
+}
+
+/**
+ * Convierte un string ISO o Date a "YYYY-MM-DD",
+ * o null si no es válido. Útil para inputs <date>.
+ */
+export function toDateOnlyOrNull(value?: string | null | Date): string | null {
+  if (!value) return null
+  const d = value instanceof Date ? value : new Date(value)
+  if (isNaN(d.getTime())) return null
   const mm = String(d.getMonth() + 1).padStart(2, "0")
   const dd = String(d.getDate()).padStart(2, "0")
   return `${d.getFullYear()}-${mm}-${dd}`

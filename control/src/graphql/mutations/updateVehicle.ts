@@ -1,9 +1,11 @@
 // control/src/graphql/mutations/updateVehicle.ts
+
 import { gql } from "@apollo/client"
 
 export const UPDATE_VEHICLE = gql`
   mutation UpdateVehicle(
     $vehicle_id: Int!
+    $client_id: Int          # 👈 añadido
     $make: String
     $model: String
     $year: Int
@@ -20,6 +22,7 @@ export const UPDATE_VEHICLE = gql`
   ) {
     updateVehicle(
       vehicle_id: $vehicle_id
+      client_id: $client_id   # 👈 añadido
       make: $make
       model: $model
       year: $year
@@ -49,6 +52,12 @@ export const UPDATE_VEHICLE = gql`
       tuv_date
       last_service_date
       updated_at
+      client {
+        client_id
+        first_name
+        last_name
+        company_name
+      }
     }
   }
 `
