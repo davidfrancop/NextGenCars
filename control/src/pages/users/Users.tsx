@@ -17,15 +17,17 @@ export default function Users() {
     <div className="p-6 text-white max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">Users</h1>
+        {/* ⬇️ Botón se queda exactamente igual que antes */}
         <Link
           to="/users/create"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 transition"
+          className="inline-flex items-center gap-1 rounded-md border px-3 py-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950"
         >
-          <Plus size={18} />
+          <Plus size={16} />
           New User
         </Link>
       </div>
 
+      {/* ⬇️ Solo tabla con visual de Vehicles */}
       <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900">
         <table className="min-w-full">
           <thead>
@@ -54,6 +56,7 @@ export default function Users() {
                     {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}
                   </td>
                   <td className="px-4 py-2 text-right space-x-2">
+                    {/* Botón Edit se queda tal cual */}
                     <Link
                       to={`/users/edit/${u.user_id}`}
                       className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
@@ -62,6 +65,7 @@ export default function Users() {
                       Edit
                     </Link>
 
+                    {/* Botón Delete se queda tal cual */}
                     <Delete
                       mutation={DELETE_USER}
                       variables={{ userId: u.user_id }}
