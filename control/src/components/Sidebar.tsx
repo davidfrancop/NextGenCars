@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
 import { getCurrentUserRole } from "@/utils/token"
-import { menuItems, Role } from "@/config/menuItems"
+import { menuItems, type Role } from "@/config/menuItems"
 import { LogOut, Menu, X } from "lucide-react"
 
 function useIsDesktop() {
-  const [isDesktop, setIsDesktop] = useState(() =>
+  const [isDesktop, setIsDesktop] = useState(
     typeof window !== "undefined" ? window.matchMedia("(min-width: 768px)").matches : true
   )
   useEffect(() => {
@@ -22,19 +22,7 @@ function useIsDesktop() {
 export default function Sidebar() {
   const isDesktop = useIsDesktop()
   const [isOpen, setIsOpen] = useState(isDesktop)
-
-  // sincróniza apertura al cambiar breakpoint
   useEffect(() => setIsOpen(isDesktop), [isDesktop])
-
-  // bloquear scroll del body cuando el sidebar móvil está abierto (overlay)
-  useEffect(() => {
-    if (!isDesktop) {
-      document.body.style.overflow = isOpen ? "hidden" : ""
-    }
-    return () => {
-      document.body.style.overflow = ""
-    }
-  }, [isDesktop, isOpen])
 
   const navigate = useNavigate()
   const role = useMemo(() => (getCurrentUserRole() as Role) ?? "frontdesk", [])
@@ -45,11 +33,9 @@ export default function Sidebar() {
     navigate("/login")
   }
 
-  const drawerWidth = "w-64"
-
+  // Botón hamburguesa (arriba derecha) — solo móvil
   return (
     <>
-      {/* Botón hamburguesa fijo ARRIBA-DERECHA en móvil */}
       <button
         type="button"
         className="md:hidden fixed top-4 right-4 z-50 inline-flex items-center justify-center rounded p-2 bg-gray-800 border border-gray-700"
@@ -59,31 +45,28 @@ export default function Sidebar() {
         {isOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
-      {/* Backdrop en móvil */}
-      {!isDesktop && isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={() => setIsOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+      {/* Overlay + sidebar en móvil */}
+      <div
+        className={`md:hidden fixed inset-0 z-40 transition-opacity duration-200 ${isOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        onClick={() => setIsOpen(false)}
+        aria-hidden="true"
+      >
+        <div className="absolute inset-0 bg-black/50" />
+      </div>
 
-      {/* Sidebar: overlay en móvil (slide), estático en desktop */}
+      {/* Sidebar: desktop estático; móvil overlay deslizable */}
       <aside
         id="main-sidebar"
         className={[
-          "bg-gray-900 text-white h-screen border-r border-gray-800 transition-all duration-200 flex flex-col",
-          isDesktop ? "fixed md:static left-0 top-0 z-30" : "fixed left-0 top-0 z-50",
-          drawerWidth,
-          // animación slide en móvil
-          !isDesktop ? (isOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0",
+          "bg-gray-900 text-white border-r border-gray-800 flex flex-col",
+          "md:static md:h-screen md:w-64",
+          "fixed top-0 left-0 h-full w-64 z-50 transform transition-transform duration-200 md:transform-none",
+          isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
         ].join(" ")}
-        aria-hidden={!isDesktop && !isOpen ? "true" : "false"}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 h-16 border-b border-gray-800">
           <div className="text-lg md:text-xl font-bold">NextGenCars</div>
-          {/* Botón cerrar solo en móvil dentro del header */}
           <button
             type="button"
             className="md:hidden inline-flex items-center justify-center rounded p-2 bg-gray-800 border border-gray-700"
@@ -94,8 +77,8 @@ export default function Sidebar() {
           </button>
         </div>
 
-        {/* Menú (sin scroll global; si hay muchos items, que haga scroll solo aquí) */}
-        <nav className="mt-3 flex-1 overflow-y-auto">
+        {/* Menú */}
+        <nav className="mt-3 flex-1 overflow-x-hidden overflow-y-auto md:overflow-y-auto">
           {filteredMenu.map((item) => {
             const Icon = item.icon
             return (
