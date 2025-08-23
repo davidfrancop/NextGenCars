@@ -1,5 +1,4 @@
 // control/src/graphql/mutations/updateVehicle.ts
-
 import { gql } from "@apollo/client"
 
 export const UPDATE_VEHICLE = gql`
@@ -16,8 +15,8 @@ export const UPDATE_VEHICLE = gql`
     $drive: String
     $transmission: String
     $km: Int
-    $tuv_date: String
-    $last_service_date: String
+    $tuv_date: Date
+    $last_service_date: Date
   ) {
     updateVehicle(
       vehicle_id: $vehicle_id
@@ -49,6 +48,7 @@ export const UPDATE_VEHICLE = gql`
       km
       tuv_date
       last_service_date
+      updated_at
     }
   }
 `
