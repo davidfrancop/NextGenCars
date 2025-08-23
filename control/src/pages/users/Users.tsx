@@ -4,30 +4,33 @@ import { useQuery } from "@apollo/client"
 import { Link } from "react-router-dom"
 import { GET_USERS } from "@/graphql/queries/getUsers"
 import { DELETE_USER } from "@/graphql/mutations/deleteUser"
-import { Pencil, Plus } from "lucide-react"
+import { Users as UsersIcon, Pencil, Plus } from "lucide-react"
 import Delete from "@/components/common/Delete"
 
 export default function Users() {
   const { data, loading, error, refetch } = useQuery(GET_USERS)
 
-  if (loading) return <p className="p-4">Loading...</p>
-  if (error) return <p className="p-4 text-red-500">Error: {error.message}</p>
+  if (loading) return <p>Loading...</p>
+  if (error) return <p>Error: {error.message}</p>
 
   return (
     <div className="p-6 text-white max-w-6xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">Users</h1>
-        {/* ⬇️ Botón se queda exactamente igual que antes */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold flex items-center gap-2">
+          <UsersIcon size={26} />
+          Users
+        </h1>
         <Link
           to="/users/create"
           className="inline-flex items-center gap-1 rounded-md border px-3 py-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+          aria-label="New User"
+          title="New User"
         >
           <Plus size={16} />
           New User
         </Link>
       </div>
 
-      {/* ⬇️ Solo tabla con visual de Vehicles */}
       <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900">
         <table className="min-w-full">
           <thead>
@@ -51,34 +54,38 @@ export default function Users() {
                 >
                   <td className="px-4 py-2">{u.username}</td>
                   <td className="px-4 py-2">{u.email}</td>
-                  <td className="px-4 py-2 capitalize">{u.role}</td>
+                  <td className="px-4 py-2">{u.role}</td>
                   <td className="px-4 py-2">
                     {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}
                   </td>
-                  <td className="px-4 py-2 text-right space-x-2">
-                    {/* Botón Edit se queda tal cual */}
-                    <Link
-                      to={`/users/edit/${u.user_id}`}
-                      className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
-                    >
-                      <Pencil size={16} />
-                      Edit
-                    </Link>
+                  <td className="px-4 py-2 text-right">
+                    <div className="flex items-center gap-3 justify-end">
+                      <Link
+                        to={`/users/edit/${u.user_id}`}
+                        className="inline-flex text-amber-400 hover:text-amber-300"
+                        title="Edit user"
+                        aria-label={`Edit user ${u.username}`}
+                      >
+                        <Pencil size={18} />
+                      </Link>
 
-                    {/* Botón Delete se queda tal cual */}
-                    <Delete
-                      mutation={DELETE_USER}
-                      variables={{ userId: u.user_id }}
-                      text={
-                        <span>
-                          Delete user <strong>{u.username}</strong>?
-                        </span>
-                      }
-                      successMessage="User deleted"
-                      errorMessage="Failed to delete user"
-                      onCompleted={refetch}
-                      className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950"
-                    />
+                      <Delete
+                        iconOnly
+                        title="Delete user"
+                        text={
+                          <span>
+                            Delete user <strong>{u.username}</strong>?
+                          </span>
+                        }
+                        successMessage="User deleted"
+                        errorMessage="Failed to delete user"
+                        onDelete={async () => {
+                          await DELETE_USER({ variables: { userId: u.user_id } })
+                          await refetch()
+                        }}
+                        className="inline-flex text-red-500 hover:text-red-400 disabled:opacity-50"
+                      />
+                    </div>
                   </td>
                 </tr>
               )
