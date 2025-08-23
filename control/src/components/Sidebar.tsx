@@ -21,6 +21,7 @@ function useIsDesktop() {
 
 export default function Sidebar() {
   const isDesktop = useIsDesktop()
+  // Desktop: abierto por defecto; Móvil: cerrado por defecto
   const [isOpen, setIsOpen] = useState(isDesktop)
   useEffect(() => setIsOpen(isDesktop), [isDesktop])
 
@@ -33,61 +34,62 @@ export default function Sidebar() {
     navigate("/login")
   }
 
-  // Anchos: abierto vs compacto (solo íconos) — en móvil siempre ancho completo
-  const widthClass = isDesktop ? (isOpen ? "w-64" : "w-20") : "w-64"
-
   return (
     <>
-      {/* Botón hamburguesa móvil */}
+      {/* Botón hamburguesa (solo móvil) */}
       <button
         type="button"
         className="md:hidden fixed top-4 left-4 z-50 inline-flex items-center justify-center rounded p-2 bg-gray-800 border border-gray-700"
-        aria-label="Toggle sidebar"
-        aria-controls="main-sidebar"
-        aria-expanded={isOpen}
         onClick={() => setIsOpen((v) => !v)}
+        aria-label={isOpen ? "Close menu" : "Open menu"}
+        aria-controls="main-sidebar"
+        aria-expanded={isOpen ? "true" : "false"}
       >
         {isOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
-      {/* Backdrop móvil */}
-      {!isDesktop && isOpen && (
+      {/* Overlay (solo móvil) */}
+      {isOpen && !isDesktop && (
         <div
-          className="fixed inset-0 z-30 bg-black/50"
-          role="presentation"
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={() => setIsOpen(false)}
+          aria-hidden="true"
         />
       )}
 
-      {/* Sidebar: overlay en móvil (fixed), estático en desktop (dentro del flex) */}
+      {/* Sidebar */}
       <aside
         id="main-sidebar"
         className={[
-          "bg-gray-900 text-white h-screen border-r border-gray-800 transition-all duration-200 flex flex-col",
-          isDesktop ? "static" : "fixed top-0 left-0 z-40",
-          widthClass,
-          !isDesktop ? "shadow-2xl" : "",
+          "bg-gray-900 text-white h-screen border-r border-gray-800 transition-transform duration-200 flex flex-col",
+          // Móvil: off-canvas fijo; Desktop: estático
+          "fixed md:static top-0 left-0 z-50 md:z-auto",
+          // Ancho
+          "w-64",
+          // Transform en móvil (oculto/visible). En desktop, siempre visible.
+          isDesktop ? "translate-x-0" : isOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
-        aria-hidden={!isDesktop && !isOpen}
+        role="navigation"
+        aria-label="Main"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 h-16 border-b border-gray-800">
-          <div className="text-lg md:text-xl font-bold">NextGenCars</div>
-          {/* Cerrar en móvil dentro del header del sidebar */}
-          {!isDesktop && (
-            <button
-              type="button"
-              className="inline-flex items-center justify-center rounded p-2 bg-gray-800 border border-gray-700"
-              aria-label="Close sidebar"
-              onClick={() => setIsOpen(false)}
-            >
-              <X size={18} />
-            </button>
-          )}
+        <div className="hidden md:flex items-center gap-2 px-4 h-16 border-b border-gray-800">
+          <div className="text-xl font-bold">NextGenCars</div>
+        </div>
+        <div className="md:hidden flex items-center justify-between px-4 h-16 border-b border-gray-800">
+          <div className="text-lg font-semibold">NextGenCars</div>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center rounded p-2 bg-gray-800 border border-gray-700"
+            onClick={() => setIsOpen(false)}
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         {/* Menú */}
-        <nav className="mt-3 flex-1">
+        <nav className="mt-3 flex-1 overflow-y-auto">
           {filteredMenu.map((item) => {
             const Icon = item.icon
             return (
@@ -99,13 +101,10 @@ export default function Sidebar() {
                     isActive ? "bg-gray-800 text-white" : "text-gray-300 hover:bg-gray-800/70"
                   }`
                 }
-                onClick={() => {
-                  // En móvil, cerrar al navegar
-                  if (!isDesktop) setIsOpen(false)
-                }}
+                onClick={() => !isDesktop && setIsOpen(false)}
               >
-                {Icon && <Icon size={20} />}
-                {(isOpen || isDesktop) && <span className="truncate">{item.label}</span>}
+                {Icon && <Icon size={20} aria-hidden="true" />}
+                <span className="truncate">{item.label}</span>
               </NavLink>
             )
           })}
@@ -118,8 +117,8 @@ export default function Sidebar() {
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg bg-gray-800/60 hover:bg-red-600/70 transition border border-gray-700 hover:border-red-500"
           >
-            <LogOut size={20} />
-            {(isOpen || isDesktop) && <span>Logout</span>}
+            <LogOut size={20} aria-hidden="true" />
+            <span>Logout</span>
           </button>
         </div>
       </aside>
