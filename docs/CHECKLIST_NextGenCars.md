@@ -1,4 +1,4 @@
-# Checklist Unificado – NextGenCars (Actualizado)
+# Checklist – NextGenCars (Actualizado)
 
 ## **Fase 5C – Funcionalidades núcleo**
 
