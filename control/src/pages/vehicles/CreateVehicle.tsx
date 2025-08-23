@@ -8,7 +8,7 @@ import { GET_VEHICLES } from "@/graphql/queries/getVehicles"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import Toast, { type ToastState } from "@/components/common/Toast" // ✅ usa el toast común
-import { parseDateEU } from "@/utils/Date"              // ✅ nuevo helper EU
+import { parseDateEU } from "@/utils/date"                         // ✅ nuevo helper EU
 
 type ClientLite = {
   client_id: number

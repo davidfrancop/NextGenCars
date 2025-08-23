@@ -1,4 +1,4 @@
-//control/src/components/common/Date.tsx
+//control/src/components/common/date.ts
 
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
