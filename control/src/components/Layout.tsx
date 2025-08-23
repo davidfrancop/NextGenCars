@@ -9,7 +9,7 @@ export default function Layout({ children }: Props) {
   return (
     <div className="bg-gray-900 text-white min-h-screen">
       <div className="flex">
-        {/* Sidebar: en desktop ocupa ancho; en móvil es overlay (no empuja) */}
+        {/* Sidebar: estático en desktop, off-canvas en móvil */}
         <Sidebar />
         {/* Contenido */}
         <main className="flex-1 p-6">
