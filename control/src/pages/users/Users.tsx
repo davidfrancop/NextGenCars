@@ -1,59 +1,32 @@
 // control/src/pages/users/Users.tsx
 
-import { useQuery, useMutation } from "@apollo/client"
+import { useQuery } from "@apollo/client"
 import { Link } from "react-router-dom"
 import { GET_USERS } from "@/graphql/queries/getUsers"
 import { DELETE_USER } from "@/graphql/mutations/deleteUser"
-import { Users as UsersIcon, Pencil, Plus } from "lucide-react"
+import { Pencil, Plus } from "lucide-react"
 import Delete from "@/components/common/Delete"
 
 export default function Users() {
   const { data, loading, error, refetch } = useQuery(GET_USERS)
-  const [deleteUser, { loading: deleting }] = useMutation(DELETE_USER)
 
-  if (loading) {
-    return (
-      <div className="p-6 text-white max-w-6xl mx-auto">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-zinc-300" role="status" aria-live="polite">
-          Loading users…
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="p-6 text-white max-w-6xl mx-auto">
-        <div className="rounded-2xl border border-red-800 bg-red-900/30 p-4 text-red-200" role="alert" aria-live="assertive">
-          Error loading users: {error.message}
-        </div>
-      </div>
-    )
-  }
-
-  const users = data?.users ?? []
+  if (loading) return <p>Loading...</p>
+  if (error) return <p>Error: {error.message}</p>
 
   return (
     <div className="p-6 text-white max-w-6xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold flex items-center gap-2">
-          <UsersIcon size={26} />
-          Users
-        </h1>
+        <h1 className="text-2xl font-semibold flex items-center gap-2">Users</h1>
         <Link
           to="/users/create"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 transition"
-          aria-label="Add user"
-          title="Add user"
         >
           <Plus size={18} />
           New User
         </Link>
       </div>
 
-      {/* Empty state */}
-      {users.length === 0 ? (
+      {!data?.users || data.users.length === 0 ? (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center">
           <p className="text-zinc-300 mb-3">No users found.</p>
           <Link
@@ -77,26 +50,22 @@ export default function Users() {
               </tr>
             </thead>
             <tbody>
-              {users.map((u: any, idx: number) => {
-                const isLast = idx === users.length - 1
-                const created =
-                  u.created_at
-                    ? (() => {
-                        const d = new Date(u.created_at)
-                        return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString()
-                      })()
-                    : "—"
-
+              {data.users.map((u: any, idx: number) => {
+                const isLast = idx === data.users.length - 1
                 return (
                   <tr
                     key={u.user_id}
-                    className={`border-b border-zinc-800 hover:bg-zinc-800/40 transition ${isLast ? "last:border-b-0" : ""}`}
+                    className={`border-b border-zinc-800 hover:bg-zinc-800/40 transition ${
+                      isLast ? "last:border-b-0" : ""
+                    }`}
                   >
                     <td className="px-4 py-2">{u.username}</td>
                     <td className="px-4 py-2">{u.email}</td>
-                    <td className="px-4 py-2 uppercase">{u.role}</td>
-                    <td className="px-4 py-2">{created}</td>
+                    <td className="px-4 py-2">{u.role}</td>
                     <td className="px-4 py-2">
+                      {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}
+                    </td>
+                    <td className="px-4 py-2 text-right">
                       <div className="flex items-center gap-3 justify-end">
                         <Link
                           to={`/users/edit/${u.user_id}`}
@@ -108,8 +77,8 @@ export default function Users() {
                         </Link>
 
                         <Delete
-                          iconOnly
-                          title="Delete user"
+                          mutation={DELETE_USER}
+                          variables={{ userId: u.user_id }} // ✅ corregido
                           text={
                             <span>
                               Delete user <strong>{u.username}</strong>?
@@ -117,12 +86,8 @@ export default function Users() {
                           }
                           successMessage="User deleted"
                           errorMessage="Failed to delete user"
-                          onDelete={async () => {
-                            await deleteUser({ variables: { userId: u.user_id } })
-                            await refetch()
-                          }}
+                          onCompleted={refetch}
                           className="inline-flex text-red-500 hover:text-red-400 disabled:opacity-50"
-                          disabled={deleting}
                         />
                       </div>
                     </td>
