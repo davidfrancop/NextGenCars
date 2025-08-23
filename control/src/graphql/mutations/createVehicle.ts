@@ -1,5 +1,4 @@
 // control/src/graphql/mutations/createVehicle.ts
-
 import { gql } from "@apollo/client"
 
 export const CREATE_VEHICLE = gql`
@@ -16,8 +15,8 @@ export const CREATE_VEHICLE = gql`
     $drive: String!
     $transmission: String!
     $km: Int!
-    $tuv_date: String
-    $last_service_date: String
+    $tuv_date: Date
+    $last_service_date: Date
   ) {
     createVehicle(
       client_id: $client_id
@@ -41,8 +40,16 @@ export const CREATE_VEHICLE = gql`
       year
       license_plate
       vin
+      hsn
+      tsn
+      fuel_type
+      drive
+      transmission
+      km
       tuv_date
       last_service_date
+      created_at
+      updated_at
     }
   }
 `
