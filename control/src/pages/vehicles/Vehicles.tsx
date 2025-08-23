@@ -140,12 +140,12 @@ export default function Vehicles() {
         </h1>
         <Link
           to="/vehicles/create"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 transition"
-          aria-label="Add vehicle"
-          title="Add vehicle"
+          className="inline-flex items-center gap-1 rounded-md border px-3 py-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+          aria-label="New Vehicle"
+          title="New Vehicle"
         >
-          <Plus size={18} />
-          Add Vehicle
+          <Plus size={16} />
+          New Vehicle
         </Link>
       </div>
 
