@@ -57,12 +57,12 @@ export default function Clients() {
         </h1>
         <Link
           to="/clients/create"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 transition"
-          aria-label="Add client"
-          title="Add client"
+          className="inline-flex items-center gap-1 rounded-md border px-3 py-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+          aria-label="New Client"
+          title="New Client"
         >
-          <Plus size={18} />
-          Add Client
+          <Plus size={16} />
+          New Client
         </Link>
       </div>
 
