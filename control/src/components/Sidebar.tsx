@@ -21,9 +21,20 @@ function useIsDesktop() {
 
 export default function Sidebar() {
   const isDesktop = useIsDesktop()
-  // Desktop: abierto por defecto; Móvil: cerrado por defecto
   const [isOpen, setIsOpen] = useState(isDesktop)
+
+  // sincróniza apertura al cambiar breakpoint
   useEffect(() => setIsOpen(isDesktop), [isDesktop])
+
+  // bloquear scroll del body cuando el sidebar móvil está abierto (overlay)
+  useEffect(() => {
+    if (!isDesktop) {
+      document.body.style.overflow = isOpen ? "hidden" : ""
+    }
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [isDesktop, isOpen])
 
   const navigate = useNavigate()
   const role = useMemo(() => (getCurrentUserRole() as Role) ?? "frontdesk", [])
@@ -34,53 +45,48 @@ export default function Sidebar() {
     navigate("/login")
   }
 
+  const drawerWidth = "w-64"
+
   return (
     <>
-      {/* Botón hamburguesa (solo móvil) */}
+      {/* Botón hamburguesa fijo ARRIBA-DERECHA en móvil */}
       <button
         type="button"
-        className="md:hidden fixed top-4 left-4 z-50 inline-flex items-center justify-center rounded p-2 bg-gray-800 border border-gray-700"
+        className="md:hidden fixed top-4 right-4 z-50 inline-flex items-center justify-center rounded p-2 bg-gray-800 border border-gray-700"
         onClick={() => setIsOpen((v) => !v)}
         aria-label={isOpen ? "Close menu" : "Open menu"}
-        aria-controls="main-sidebar"
-        aria-expanded={isOpen ? "true" : "false"}
       >
         {isOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
-      {/* Overlay (solo móvil) */}
-      {isOpen && !isDesktop && (
+      {/* Backdrop en móvil */}
+      {!isDesktop && isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/50 z-40"
           onClick={() => setIsOpen(false)}
           aria-hidden="true"
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar: overlay en móvil (slide), estático en desktop */}
       <aside
         id="main-sidebar"
         className={[
-          "bg-gray-900 text-white h-screen border-r border-gray-800 transition-transform duration-200 flex flex-col",
-          // Móvil: off-canvas fijo; Desktop: estático
-          "fixed md:static top-0 left-0 z-50 md:z-auto",
-          // Ancho
-          "w-64",
-          // Transform en móvil (oculto/visible). En desktop, siempre visible.
-          isDesktop ? "translate-x-0" : isOpen ? "translate-x-0" : "-translate-x-full",
+          "bg-gray-900 text-white h-screen border-r border-gray-800 transition-all duration-200 flex flex-col",
+          isDesktop ? "fixed md:static left-0 top-0 z-30" : "fixed left-0 top-0 z-50",
+          drawerWidth,
+          // animación slide en móvil
+          !isDesktop ? (isOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0",
         ].join(" ")}
-        role="navigation"
-        aria-label="Main"
+        aria-hidden={!isDesktop && !isOpen ? "true" : "false"}
       >
         {/* Header */}
-        <div className="hidden md:flex items-center gap-2 px-4 h-16 border-b border-gray-800">
-          <div className="text-xl font-bold">NextGenCars</div>
-        </div>
-        <div className="md:hidden flex items-center justify-between px-4 h-16 border-b border-gray-800">
-          <div className="text-lg font-semibold">NextGenCars</div>
+        <div className="flex items-center justify-between px-4 h-16 border-b border-gray-800">
+          <div className="text-lg md:text-xl font-bold">NextGenCars</div>
+          {/* Botón cerrar solo en móvil dentro del header */}
           <button
             type="button"
-            className="inline-flex items-center justify-center rounded p-2 bg-gray-800 border border-gray-700"
+            className="md:hidden inline-flex items-center justify-center rounded p-2 bg-gray-800 border border-gray-700"
             onClick={() => setIsOpen(false)}
             aria-label="Close menu"
           >
@@ -88,7 +94,7 @@ export default function Sidebar() {
           </button>
         </div>
 
-        {/* Menú */}
+        {/* Menú (sin scroll global; si hay muchos items, que haga scroll solo aquí) */}
         <nav className="mt-3 flex-1 overflow-y-auto">
           {filteredMenu.map((item) => {
             const Icon = item.icon
@@ -103,7 +109,7 @@ export default function Sidebar() {
                 }
                 onClick={() => !isDesktop && setIsOpen(false)}
               >
-                {Icon && <Icon size={20} aria-hidden="true" />}
+                {Icon && <Icon size={20} />}
                 <span className="truncate">{item.label}</span>
               </NavLink>
             )
@@ -117,7 +123,7 @@ export default function Sidebar() {
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg bg-gray-800/60 hover:bg-red-600/70 transition border border-gray-700 hover:border-red-500"
           >
-            <LogOut size={20} aria-hidden="true" />
+            <LogOut size={20} />
             <span>Logout</span>
           </button>
         </div>
