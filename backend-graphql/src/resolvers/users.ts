@@ -20,23 +20,29 @@ function signToken(user: { user_id: number; email: string; role: string }) {
 export const userResolvers = {
   Query: {
     users: async (_: unknown, __: unknown, { db }: Context) => {
-      return db.users.findMany({ orderBy: { created_at: "desc" } })
+      const list = await db.users.findMany({ orderBy: { created_at: "desc" } })
+      // 🔹 normalizamos el campo a ISO string para evitar "Invalid Date" en frontend
+      return list.map((u) => ({
+        ...u,
+        created_at: u.created_at ? new Date(u.created_at).toISOString() : null,
+      }))
     },
 
-    // 🔎 Obtener usuario por ID
     user: async (_: unknown, { userId }: { userId: number }, { db }: Context) => {
       const found = await db.users.findUnique({ where: { user_id: userId } })
       if (!found) {
-        throw new GraphQLError("Usuario no encontrado", {
+        throw new GraphQLError("User not found", {
           extensions: { code: "NOT_FOUND" },
         })
       }
-      return found
+      return {
+        ...found,
+        created_at: found.created_at ? new Date(found.created_at).toISOString() : null,
+      }
     },
   },
 
   Mutation: {
-    // ➕ Crear usuario (con hash)
     createUser: async (
       _: unknown,
       args: { username: string; email: string; password: string; role: string },
@@ -47,17 +53,27 @@ export const userResolvers = {
 
       const exists = await db.users.findUnique({ where: { email } })
       if (exists) {
-        throw new GraphQLError("Email ya está en uso", {
+        throw new GraphQLError("Email already in use", {
           extensions: { code: "BAD_USER_INPUT" },
         })
       }
 
-      return db.users.create({
-        data: { username, email, role, password_hash },
+      const newUser = await db.users.create({
+        data: {
+          username,
+          email,
+          role,
+          password_hash,
+          created_at: new Date(), // 🔹 aseguramos fecha al crear
+        },
       })
+
+      return {
+        ...newUser,
+        created_at: newUser.created_at.toISOString(),
+      }
     },
 
-    // ✏️ Actualizar usuario
     updateUser: async (
       _: unknown,
       args: {
@@ -70,20 +86,17 @@ export const userResolvers = {
       { db }: Context
     ) => {
       const { userId, username, email, role, password } = args
-
-      // Verificar existencia
       const existing = await db.users.findUnique({ where: { user_id: userId } })
       if (!existing) {
-        throw new GraphQLError("Usuario no encontrado", {
+        throw new GraphQLError("User not found", {
           extensions: { code: "NOT_FOUND" },
         })
       }
 
-      // Validar email único si se cambia
       if (email !== existing.email) {
         const emailTaken = await db.users.findUnique({ where: { email } })
         if (emailTaken) {
-          throw new GraphQLError("Email ya está en uso", {
+          throw new GraphQLError("Email already in use", {
             extensions: { code: "BAD_USER_INPUT" },
           })
         }
@@ -94,20 +107,23 @@ export const userResolvers = {
         updateData.password_hash = await bcrypt.hash(password, 10)
       }
 
-      return db.users.update({
+      const updated = await db.users.update({
         where: { user_id: userId },
         data: updateData,
       })
+
+      return {
+        ...updated,
+        created_at: updated.created_at ? new Date(updated.created_at).toISOString() : null,
+      }
     },
 
-    // 🔐 Login
     loginUser: async (
       _: unknown,
       args: { email: string; password: string },
       { db }: Context
     ) => {
       const { email, password } = args
-
       const user = await db.users.findUnique({ where: { email } })
       if (!user) {
         throw new GraphQLError("Invalid credentials", {
@@ -126,7 +142,6 @@ export const userResolvers = {
       return { token }
     },
 
-    // 🗑️ Eliminar usuario
     deleteUser: async (
       _: unknown,
       args: { userId: number },
@@ -135,27 +150,29 @@ export const userResolvers = {
       const { userId } = args
 
       if (user && user.sub && Number(user.sub) === userId) {
-        throw new GraphQLError("No puedes eliminar tu propio usuario.", {
+        throw new GraphQLError("You cannot delete your own account.", {
           extensions: { code: "FORBIDDEN" },
         })
       }
 
       if (userId === 1) {
-        throw new GraphQLError("No se puede eliminar el admin principal.", {
+        throw new GraphQLError("Primary admin cannot be deleted.", {
           extensions: { code: "FORBIDDEN" },
         })
       }
 
       const toDelete = await db.users.findUnique({ where: { user_id: userId } })
       if (!toDelete) {
-        throw new GraphQLError("Usuario no encontrado.", {
+        throw new GraphQLError("User not found.", {
           extensions: { code: "NOT_FOUND" },
         })
       }
 
-      return db.users.delete({
-        where: { user_id: userId },
-      })
+      const deleted = await db.users.delete({ where: { user_id: userId } })
+      return {
+        ...deleted,
+        created_at: deleted.created_at ? new Date(deleted.created_at).toISOString() : null,
+      }
     },
   },
 }
