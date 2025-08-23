@@ -203,3 +203,17 @@
 - A11y AA (roles/aria/foco), teclado OK.
 - Impresión lista y legible.
 - QA matriz (15 casos) pasada.
+
+
+## 🔑 Patrón unificado de eliminación (Delete)
+
+Todas las entidades (Users, Clients, Vehicles y futuras) deben seguir siempre este flujo para eliminación:
+
+**Página → <Delete /> → Delete.tsx → useMutation(Apollo) → backend → ConfirmDialog + Toast**
+
+- La página **NO importa directamente useMutation**.
+- Solo importa el componente común `<Delete />` y le pasa `mutation`, `variables`, mensajes y `onCompleted` (para refetch si aplica).
+- `Delete.tsx` contiene:
+  - ConfirmDialog (OK / Cancel).
+  - Ejecución de la mutación vía Apollo.
+  - Manejo de Toast de éxito o error.
