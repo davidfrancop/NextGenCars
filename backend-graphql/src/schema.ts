@@ -31,7 +31,7 @@ export const schema = createSchema<Context>({
       company_name: String
       vat_number: String
       contact_person: String
-      # Compartidos
+      # Shared
       email: String
       phone: String
       dni: String
@@ -75,7 +75,7 @@ export const schema = createSchema<Context>({
       company_name: String
       vat_number: String
       contact_person: String
-      # Compartidos
+      # Shared
       email: String
       phone: String
       dni: String
@@ -94,7 +94,7 @@ export const schema = createSchema<Context>({
       company_name: String
       vat_number: String
       contact_person: String
-      # Compartidos
+      # Shared
       email: String
       phone: String
       dni: String
@@ -140,7 +140,7 @@ export const schema = createSchema<Context>({
       # Clients
       clients(type: ClientType, search: String, take: Int, skip: Int): [Client!]!
       client(client_id: Int!): Client
-      personalClients: [Client!]!  # compat
+      personalClients: [Client!]!
 
       # Vehicles
       vehicles: [Vehicle!]!
@@ -181,11 +181,12 @@ export const schema = createSchema<Context>({
 
       updateVehicle(
         vehicle_id: Int!
-        client_id: Int          # 👈 añadido para permitir reasignar vehículo
+        # allow re-assignment to another client
+        client_id: Int
         make: String
         model: String
         year: Int
-        # Aceptamos ambos alias por compatibilidad:
+        # keep both aliases for compatibility
         license_plate: String
         plate: String
         vin: String
