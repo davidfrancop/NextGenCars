@@ -6,31 +6,12 @@ import { UPDATE_VEHICLE } from "@/graphql/mutations/updateVehicle"
 import { GET_VEHICLES } from "@/graphql/queries/getVehicles"
 import { useNavigate, useParams, Link } from "react-router-dom"
 import React, { useEffect, useMemo, useRef, useState } from "react"
-import Toast, { type ToastState } from "@/components/common/Toast" // ✅ usar Toast común
+import Toast, { type ToastState } from "@/components/common/Toast"
+import { isoToYyyyMmDd, toDateOnlyOrNull } from "@/utils/Date"  // ✅ usar helpers comunes
 
 // -------- helpers ----------
 const plateRegex = /^[A-Z0-9\- ]{4,12}$/
 const normalizePlate = (v: string) => v.toUpperCase().replace(/\s+/g, " ").trim()
-
-const toISODateOrNull = (yyyyMmDd: string) => {
-  if (!yyyyMmDd) return null
-  const d = new Date(`${yyyyMmDd}T00:00:00Z`) // force UTC midnight
-  return isNaN(d.getTime()) ? null : d.toISOString()
-}
-
-// Accepts ISO or epoch (string/number) and formats YYYY-MM-DD for <input type="date">
-const isoToYyyyMmDd = (raw?: string | number | null) => {
-  if (raw == null || raw === "") return ""
-  if (typeof raw === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
-  let d: Date
-  if (typeof raw === "number") d = new Date(raw)
-  else if (/^\d+$/.test(raw)) d = new Date(Number(raw))
-  else d = new Date(raw)
-  if (isNaN(d.getTime())) return ""
-  const mm = String(d.getUTCMonth() + 1).padStart(2, "0")
-  const dd = String(d.getUTCDate()).padStart(2, "0")
-  return `${d.getUTCFullYear()}-${mm}-${dd}`
-}
 
 const FUEL_OPTIONS = [
   "Gasoline",
@@ -75,12 +56,11 @@ export default function EditVehicle() {
     fetchPolicy: "cache-and-network",
   })
 
-  const [toast, setToast] = useState<ToastState>(null) // ✅ usar estado del Toast común
+  const [toast, setToast] = useState<ToastState>(null)
 
   const [updateVehicle, { loading: mLoading }] = useMutation(UPDATE_VEHICLE, {
     onCompleted: () => {
       setToast({ type: "success", msg: "Vehicle updated" })
-      // El Toast común se autocierra; navegamos tras un breve delay
       setTimeout(() => navigate("/vehicles"), 600)
     },
     onError: (err) => {
@@ -130,6 +110,7 @@ export default function EditVehicle() {
       drive: v.drive ?? "",
       transmission: v.transmission ?? "",
       km: v.km?.toString() ?? "",
+      // ✅ prefill desde ISO/Date a "YYYY-MM-DD"
       tuv_date: isoToYyyyMmDd(v.tuv_date as any),
       last_service_date: isoToYyyyMmDd(v.last_service_date as any),
     })
@@ -199,8 +180,9 @@ export default function EditVehicle() {
         drive: form.drive || undefined,
         transmission: form.transmission || undefined,
         km: form.km ? Number(form.km) : undefined,
-        tuv_date: form.tuv_date ? toISODateOrNull(form.tuv_date) : undefined,
-        last_service_date: form.last_service_date ? toISODateOrNull(form.last_service_date) : undefined,
+        // ✅ enviar date-only ("YYYY-MM-DD") solo si existe
+        tuv_date: form.tuv_date ? toDateOnlyOrNull(form.tuv_date) : undefined,
+        last_service_date: form.last_service_date ? toDateOnlyOrNull(form.last_service_date) : undefined,
       },
     })
   }
@@ -448,7 +430,7 @@ export default function EditVehicle() {
               className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
             >
               <option value="">— Select —</option>
-              {fuelOptions.map((opt) => (
+              {FUEL_OPTIONS.map((opt) => (
                 <option key={opt} value={opt}>
                   {FUEL_OPTIONS.includes(opt as any) ? opt : `${opt} (current)`}
                 </option>
@@ -469,7 +451,7 @@ export default function EditVehicle() {
               className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
             >
               <option value="">— Select —</option>
-              {driveOptions.map((opt) => (
+              {DRIVE_OPTIONS.map((opt) => (
                 <option key={opt} value={opt}>
                   {DRIVE_OPTIONS.includes(opt as any) ? opt : `${opt} (current)`}
                 </option>
@@ -490,7 +472,7 @@ export default function EditVehicle() {
               className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
             >
               <option value="">— Select —</option>
-              {transmissionOptions.map((opt) => (
+              {TRANSMISSION_OPTIONS.map((opt) => (
                 <option key={opt} value={opt}>
                   {TRANSMISSION_OPTIONS.includes(opt as any) ? opt : `${opt} (current)`}
                 </option>
@@ -572,7 +554,7 @@ export default function EditVehicle() {
         </div>
       </form>
 
-      {/* ✅ Toast común: se auto-cierra y puedes limpiarlo con onClose */}
+      {/* Toast */}
       {toast && (
         <Toast
           type={toast.type}
