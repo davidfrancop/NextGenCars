@@ -121,6 +121,10 @@ export const vehicleResolvers = {
         throw new Error("Invalid mileage. Must be a non-negative integer ≤ 2,000,000.")
       }
 
+      // Ensure client exists
+      const client = await db.clients.findUnique({ where: { client_id: args.client_id } })
+      if (!client) throw new Error("Target client not found.")
+
       // Uniqueness
       const [plateExists, vinExists] = await Promise.all([
         db.vehicles.findUnique({ where: { license_plate } }),
@@ -164,6 +168,7 @@ export const vehicleResolvers = {
       _: unknown,
       args: {
         vehicle_id: number
+        client_id?: number
         make?: string
         model?: string
         year?: number
@@ -183,6 +188,13 @@ export const vehicleResolvers = {
       { db }: Context
     ) => {
       const { vehicle_id, ...rest } = args
+
+      // If client_id changes, ensure the target client exists
+      let nextClientId: number | undefined = rest.client_id
+      if (typeof nextClientId === "number") {
+        const targetClient = await db.clients.findUnique({ where: { client_id: nextClientId } })
+        if (!targetClient) throw new Error("Target client not found.")
+      }
 
       // License plate (supports 'plate' or 'license_plate')
       const incomingPlate = rest.plate ?? rest.license_plate
@@ -247,6 +259,7 @@ export const vehicleResolvers = {
         const updated = await db.vehicles.update({
           where: { vehicle_id },
           data: {
+            ...(nextClientId !== undefined ? { client_id: nextClientId } : {}),
             ...(rest.make !== undefined ? { make: rest.make?.trim() } : {}),
             ...(rest.model !== undefined ? { model: rest.model?.trim() } : {}),
             ...(rest.year !== undefined ? { year: rest.year } : {}),
@@ -261,6 +274,7 @@ export const vehicleResolvers = {
             ...(tuvDate !== undefined ? { tuv_date: tuvDate } : {}),
             ...(lastServiceDate !== undefined ? { last_service_date: lastServiceDate } : {}),
           },
+          include: { client: true },
         })
         return updated
       } catch (err: any) {
