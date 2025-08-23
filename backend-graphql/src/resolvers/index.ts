@@ -1,6 +1,6 @@
 // backend-graphql/src/resolvers/index.ts
 
-import { GraphQLDateTime } from "graphql-scalars"
+import { GraphQLDateTime, GraphQLDate } from "graphql-scalars"
 import { vehicleResolvers } from "./vehicles"
 import { clientsResolvers } from "./clients"
 import { dashboardResolvers } from "./dashboard"
@@ -31,8 +31,9 @@ function mergeResolvers(acc: ResolverMap, mod?: Partial<ResolverMap>): ResolverM
 export const resolvers: ResolverMap = modules.reduce(
   mergeResolvers,
   {
-    // 👇 Registro del escalar DateTime (necesario para tu schema.ts)
+    // 👇 Registro de escalares para tu schema.ts
     DateTime: GraphQLDateTime,
+    Date: GraphQLDate,
 
     Query: {
       hello: () => "Hello from NextGen Cars GraphQL backend",
