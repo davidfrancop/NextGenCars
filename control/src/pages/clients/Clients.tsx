@@ -1,11 +1,11 @@
 // control/src/pages/clients/Clients.tsx
 
-import { useState } from "react"
 import { useQuery, useMutation } from "@apollo/client"
 import { Link } from "react-router-dom"
 import { GET_CLIENTS } from "@/graphql/queries/getClients"
 import { DELETE_CLIENT } from "@/graphql/mutations/deleteClient"
 import { Users, Pencil, Plus, Car } from "lucide-react"
+import { useState } from "react"
 import Delete from "@/components/common/Delete"
 
 function fullClientName(c: any) {
@@ -45,6 +45,7 @@ export default function Clients() {
     fetchPolicy: "cache-and-network",
   })
 
+  // Solo la mutación. Confirmación/Toast los maneja <Delete />
   const [deleteClient, { loading: deleting }] = useMutation(DELETE_CLIENT)
 
   return (
@@ -65,7 +66,6 @@ export default function Clients() {
         </Link>
       </div>
 
-      {/* Filter tabs: All / Personal / Company */}
       <div className="mb-4 flex items-center gap-2">
         {([
           { label: "All", value: null },
@@ -172,11 +172,11 @@ export default function Clients() {
                           text="This action cannot be undone. Do you want to delete this client?"
                           successMessage="Client deleted"
                           errorMessage="Failed to delete client"
-                          className="inline-flex text-red-500 hover:text-red-400 disabled:opacity-50"
                           onDelete={async () => {
                             await deleteClient({ variables: { clientId: c.client_id } })
                             await refetch()
                           }}
+                          className="inline-flex text-red-500 hover:text-red-400 disabled:opacity-50"
                         />
                       </div>
                     </td>
