@@ -2,48 +2,46 @@
 
 import { useState } from "react"
 import { Trash2 } from "lucide-react"
-import { useMutation, type DocumentNode } from "@apollo/client"
 import ConfirmDialog from "@/components/common/Confirmation"
 import Toast, { type ToastState } from "@/components/common/Toast"
 
-type DeleteApolloProps<TVars extends Record<string, any>> = {
-  mutation: DocumentNode
-  variables: TVars | (() => TVars)
+type DeleteProps = {
+  onDelete: () => Promise<void> | void
   label?: React.ReactNode
   title?: string
   text?: React.ReactNode
   successMessage?: string
   errorMessage?: string
-  onCompleted?: () => Promise<void> | void
-  refetchQueries?: Array<{ query: DocumentNode; variables?: Record<string, any> }>
   className?: string
   iconOnly?: boolean
 }
 
-export default function DeleteApollo<TVars extends Record<string, any>>({
-  mutation,
-  variables,
+export default function Delete({
+  onDelete,
   label = "Delete",
   title = "Confirm deletion",
   text = "Are you sure you want to delete this record? This action cannot be undone.",
   successMessage = "Deleted successfully",
   errorMessage = "Delete failed",
-  onCompleted,
-  refetchQueries,
   className = "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950",
   iconOnly = false,
-}: DeleteApolloProps<TVars>) {
+}: DeleteProps) {
   const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState<ToastState>(null)
 
-  const [run, { loading }] = useMutation(mutation, {
-    refetchQueries,
-    onCompleted: async () => {
+  const handleConfirm = async () => {
+    try {
+      setLoading(true)
+      await onDelete()
       setToast({ type: "success", msg: successMessage })
-      await onCompleted?.()
-    },
-    onError: (e) => setToast({ type: "error", msg: e?.message || errorMessage }),
-  })
+    } catch (e: any) {
+      setToast({ type: "error", msg: e?.message || errorMessage })
+    } finally {
+      setLoading(false)
+      setOpen(false)
+    }
+  }
 
   return (
     <>
@@ -62,11 +60,7 @@ export default function DeleteApollo<TVars extends Record<string, any>>({
         title={title}
         text={text}
         onCancel={() => setOpen(false)}
-        onConfirm={async () => {
-          const vars = typeof variables === "function" ? (variables as any)() : variables
-          await run({ variables: vars })
-          setOpen(false)
-        }}
+        onConfirm={handleConfirm}
         loading={loading}
       />
 
