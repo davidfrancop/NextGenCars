@@ -1,15 +1,12 @@
 // control/src/pages/clients/Clients.tsx
 
+import { useState } from "react"
 import { useQuery, useMutation } from "@apollo/client"
 import { Link } from "react-router-dom"
-import { useState } from "react"
-import { Users, Pencil, Plus, Car } from "lucide-react"
-
 import { GET_CLIENTS } from "@/graphql/queries/getClients"
 import { DELETE_CLIENT } from "@/graphql/mutations/deleteClient"
+import { Users, Pencil, Plus, Car } from "lucide-react"
 import Delete from "@/components/common/Delete"
-
-type ClientTypeFilter = "PERSONAL" | "COMPANY" | null
 
 function fullClientName(c: any) {
   if (c.type === "COMPANY") return c.company_name ?? "—"
@@ -38,6 +35,8 @@ function vehiclesPreview(c: any) {
   )
 }
 
+type ClientTypeFilter = "PERSONAL" | "COMPANY" | null
+
 export default function Clients() {
   const [typeFilter, setTypeFilter] = useState<ClientTypeFilter>(null)
 
@@ -46,12 +45,10 @@ export default function Clients() {
     fetchPolicy: "cache-and-network",
   })
 
-  // La confirmación/toast los maneja <Delete />, aquí solo ejecutamos la mutación
   const [deleteClient, { loading: deleting }] = useMutation(DELETE_CLIENT)
 
   return (
     <div className="p-6 text-white max-w-6xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold flex items-center gap-2">
           <Users size={26} />
@@ -59,16 +56,16 @@ export default function Clients() {
         </h1>
         <Link
           to="/clients/create"
-          className="inline-flex items-center gap-1 rounded-md border px-3 py-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 transition"
           aria-label="Add client"
           title="Add client"
         >
-          <Plus size={16} />
-          New Client
+          <Plus size={18} />
+          Add Client
         </Link>
       </div>
 
-      {/* Filtro tipo: All / Personal / Company */}
+      {/* Filter tabs: All / Personal / Company */}
       <div className="mb-4 flex items-center gap-2">
         {([
           { label: "All", value: null },
@@ -93,11 +90,8 @@ export default function Clients() {
         })}
       </div>
 
-      {/* Estados */}
       {loading && (
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-zinc-300">
-          Loading clients…
-        </div>
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-zinc-300">Loading clients…</div>
       )}
 
       {error && (
@@ -111,15 +105,14 @@ export default function Clients() {
           <p className="text-zinc-300 mb-3">No clients found.</p>
           <Link
             to="/clients/create"
-            className="inline-flex items-center gap-1 rounded-md border px-3 py-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500"
           >
-            <Plus size={16} />
-            New Client
+            <Plus size={18} />
+            Add your first client
           </Link>
         </div>
       )}
 
-      {/* Tabla */}
       {!loading && !error && data?.clients?.length > 0 && (
         <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900">
           <table className="min-w-full">
@@ -130,7 +123,7 @@ export default function Clients() {
                 <th className="px-4 py-3 text-sm font-medium text-zinc-300">Contact</th>
                 <th className="px-4 py-3 text-sm font-medium text-zinc-300">Country</th>
                 <th className="px-4 py-3 text-sm font-medium text-zinc-300">Vehicles</th>
-                <th className="px-4 py-3 text-sm font-medium text-zinc-300 text-right">Actions</th>
+                <th className="px-4 py-3 text-sm font-medium text-zinc-300">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -150,7 +143,9 @@ export default function Clients() {
                 return (
                   <tr
                     key={c.client_id}
-                    className={`border-b border-zinc-800 hover:bg-zinc-800/40 transition ${isLast ? "last:border-b-0" : ""}`}
+                    className={`border-b border-zinc-800 hover:bg-zinc-800/40 transition ${
+                      isLast ? "last:border-b-0" : ""
+                    }`}
                   >
                     <td className="px-4 py-2">{fullClientName(c)}</td>
                     <td className="px-4 py-2">{typeBadge}</td>
@@ -161,15 +156,14 @@ export default function Clients() {
                     <td className="px-4 py-2">{c.country || "—"}</td>
                     <td className="px-4 py-2">{vehiclesPreview(c)}</td>
                     <td className="px-4 py-2">
-                      <div className="flex items-center gap-2 justify-end">
+                      <div className="flex items-center gap-3">
                         <Link
                           to={`/clients/${c.client_id}/edit`}
-                          className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
+                          className="inline-flex text-amber-400 hover:text-amber-300"
                           title="Edit client"
                           aria-label={`Edit client ${fullClientName(c)}`}
                         >
-                          <Pencil size={16} />
-                          Edit
+                          <Pencil size={18} />
                         </Link>
 
                         <Delete
@@ -178,12 +172,11 @@ export default function Clients() {
                           text="This action cannot be undone. Do you want to delete this client?"
                           successMessage="Client deleted"
                           errorMessage="Failed to delete client"
+                          className="inline-flex text-red-500 hover:text-red-400 disabled:opacity-50"
                           onDelete={async () => {
-                            await deleteClient({ variables: { clientId: c.client_id } }) // camelCase
+                            await deleteClient({ variables: { clientId: c.client_id } })
                             await refetch()
                           }}
-                          className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 disabled:opacity-50"
-                          disabled={deleting}
                         />
                       </div>
                     </td>
