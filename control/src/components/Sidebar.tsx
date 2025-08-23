@@ -26,16 +26,20 @@ export default function Sidebar() {
 
   const navigate = useNavigate()
   const role = useMemo(() => (getCurrentUserRole() as Role) ?? "frontdesk", [])
-  const filteredMenu = menuItems.filter((item) => item.roles.includes(role))
+
+  // 🔹 Ahora oculta items con showInSidebar === false (ej: Users)
+  const filteredMenu = menuItems.filter(
+    (item) => item.roles.includes(role) && item.showInSidebar !== false
+  )
 
   const handleLogout = () => {
     localStorage.removeItem("nextgencars_token")
     navigate("/login")
   }
 
-  // Botón hamburguesa (arriba derecha) — solo móvil
   return (
     <>
+      {/* Botón hamburguesa (arriba derecha) — solo móvil */}
       <button
         type="button"
         className="md:hidden fixed top-4 right-4 z-50 inline-flex items-center justify-center rounded p-2 bg-gray-800 border border-gray-700"
@@ -45,16 +49,18 @@ export default function Sidebar() {
         {isOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
-      {/* Overlay + sidebar en móvil */}
+      {/* Overlay en móvil */}
       <div
-        className={`md:hidden fixed inset-0 z-40 transition-opacity duration-200 ${isOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        className={`md:hidden fixed inset-0 z-40 transition-opacity duration-200 ${
+          isOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
         onClick={() => setIsOpen(false)}
         aria-hidden="true"
       >
         <div className="absolute inset-0 bg-black/50" />
       </div>
 
-      {/* Sidebar: desktop estático; móvil overlay deslizable */}
+      {/* Sidebar */}
       <aside
         id="main-sidebar"
         className={[
@@ -87,7 +93,9 @@ export default function Sidebar() {
                 to={item.path}
                 className={({ isActive }) =>
                   `flex items-center gap-3 mx-2 my-1 px-3 py-2 rounded-lg transition ${
-                    isActive ? "bg-gray-800 text-white" : "text-gray-300 hover:bg-gray-800/70"
+                    isActive
+                      ? "bg-gray-800 text-white"
+                      : "text-gray-300 hover:bg-gray-800/70"
                   }`
                 }
                 onClick={() => !isDesktop && setIsOpen(false)}
