@@ -1,5 +1,3 @@
-// control/src/pages/clients/Clients.tsx
-
 import { useQuery, useMutation } from "@apollo/client"
 import { Link } from "react-router-dom"
 import { GET_CLIENTS } from "@/graphql/queries/getClients"
@@ -45,8 +43,7 @@ export default function Clients() {
     fetchPolicy: "cache-and-network",
   })
 
-  // La mutación vive aquí; el modal + toast lo maneja <Delete />
-  const [deleteClient, { loading: deleting }] = useMutation(DELETE_CLIENT)
+  const [runDelete] = useMutation(DELETE_CLIENT)
 
   return (
     <div className="p-6 text-white max-w-6xl mx-auto">
@@ -66,7 +63,6 @@ export default function Clients() {
         </Link>
       </div>
 
-      {/* Filtro All / Personal / Company */}
       <div className="mb-4 flex items-center gap-2">
         {([
           { label: "All", value: null },
@@ -124,7 +120,7 @@ export default function Clients() {
                 <th className="px-4 py-3 text-sm font-medium text-zinc-300">Contact</th>
                 <th className="px-4 py-3 text-sm font-medium text-zinc-300">Country</th>
                 <th className="px-4 py-3 text-sm font-medium text-zinc-300">Vehicles</th>
-                <th className="px-4 py-3 text-sm font-medium text-zinc-300">Actions</th>
+                <th className="px-4 py-3 text-sm font-medium text-zinc-300 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -144,9 +140,7 @@ export default function Clients() {
                 return (
                   <tr
                     key={c.client_id}
-                    className={`border-b border-zinc-800 hover:bg-zinc-800/40 transition ${
-                      isLast ? "last:border-b-0" : ""
-                    }`}
+                    className={`border-b border-zinc-800 hover:bg-zinc-800/40 transition ${isLast ? "last:border-b-0" : ""}`}
                   >
                     <td className="px-4 py-2">{fullClientName(c)}</td>
                     <td className="px-4 py-2">{typeBadge}</td>
@@ -157,7 +151,7 @@ export default function Clients() {
                     <td className="px-4 py-2">{c.country || "—"}</td>
                     <td className="px-4 py-2">{vehiclesPreview(c)}</td>
                     <td className="px-4 py-2">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 justify-end">
                         <Link
                           to={`/clients/${c.client_id}/edit`}
                           className="inline-flex text-amber-400 hover:text-amber-300"
@@ -173,13 +167,11 @@ export default function Clients() {
                           text="This action cannot be undone. Do you want to delete this client?"
                           successMessage="Client deleted"
                           errorMessage="Failed to delete client"
-                          className="inline-flex text-red-500 hover:text-red-400 disabled:opacity-50"
                           onDelete={async () => {
-                            // Backend espera camelCase: { clientId }
-                            await deleteClient({ variables: { clientId: c.client_id } })
+                            await runDelete({ variables: { clientId: c.client_id } })
                             await refetch()
                           }}
-                          disabled={deleting}
+                          className="inline-flex text-red-500 hover:text-red-400 disabled:opacity-50"
                         />
                       </div>
                     </td>
