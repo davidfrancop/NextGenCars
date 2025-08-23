@@ -8,9 +8,7 @@ import { LogOut, Menu, X } from "lucide-react"
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(() =>
-    typeof window !== "undefined"
-      ? window.matchMedia("(min-width: 768px)").matches
-      : true
+    typeof window !== "undefined" ? window.matchMedia("(min-width: 768px)").matches : true
   )
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)")
@@ -35,43 +33,57 @@ export default function Sidebar() {
     navigate("/login")
   }
 
-  const widthClass = isOpen || isDesktop ? "w-64" : "w-20"
+  // Anchos: abierto vs compacto (solo íconos) — en móvil siempre ancho completo
+  const widthClass = isDesktop ? (isOpen ? "w-64" : "w-20") : "w-64"
 
   return (
     <>
-      {/* Botón móvil (overlay) */}
+      {/* Botón hamburguesa móvil */}
       <button
         type="button"
         className="md:hidden fixed top-4 left-4 z-50 inline-flex items-center justify-center rounded p-2 bg-gray-800 border border-gray-700"
+        aria-label="Toggle sidebar"
+        aria-controls="main-sidebar"
+        aria-expanded={isOpen}
         onClick={() => setIsOpen((v) => !v)}
       >
         {isOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
-      {/* Sidebar: fijo sólo en móvil (overlay), estático en desktop (empuja por flex) */}
+      {/* Backdrop móvil */}
+      {!isDesktop && isOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50"
+          role="presentation"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      {/* Sidebar: overlay en móvil (fixed), estático en desktop (dentro del flex) */}
       <aside
         id="main-sidebar"
         className={[
           "bg-gray-900 text-white h-screen border-r border-gray-800 transition-all duration-200 flex flex-col",
-          "fixed md:static top-0 left-0 z-40", // fixed en móvil, static en desktop
+          isDesktop ? "static" : "fixed top-0 left-0 z-40",
           widthClass,
-          // sombra leve cuando es overlay
           !isDesktop ? "shadow-2xl" : "",
         ].join(" ")}
+        aria-hidden={!isDesktop && !isOpen}
       >
         {/* Header */}
-        <div className="hidden md:flex items-center gap-2 px-4 h-16 border-b border-gray-800">
-          <div className="text-xl font-bold">NextGenCars</div>
-        </div>
-        <div className="md:hidden flex items-center justify-between px-4 h-16 border-b border-gray-800">
-          <div className="text-lg font-semibold">NextGenCars</div>
-          <button
-            type="button"
-            className="inline-flex items-center justify-center rounded p-2 bg-gray-800 border border-gray-700"
-            onClick={() => setIsOpen(false)}
-          >
-            <X size={18} />
-          </button>
+        <div className="flex items-center justify-between px-4 h-16 border-b border-gray-800">
+          <div className="text-lg md:text-xl font-bold">NextGenCars</div>
+          {/* Cerrar en móvil dentro del header del sidebar */}
+          {!isDesktop && (
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded p-2 bg-gray-800 border border-gray-700"
+              aria-label="Close sidebar"
+              onClick={() => setIsOpen(false)}
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
 
         {/* Menú */}
@@ -84,12 +96,13 @@ export default function Sidebar() {
                 to={item.path}
                 className={({ isActive }) =>
                   `flex items-center gap-3 mx-2 my-1 px-3 py-2 rounded-lg transition ${
-                    isActive
-                      ? "bg-gray-800 text-white"
-                      : "text-gray-300 hover:bg-gray-800/70"
+                    isActive ? "bg-gray-800 text-white" : "text-gray-300 hover:bg-gray-800/70"
                   }`
                 }
-                onClick={() => !isDesktop && setIsOpen(false)}
+                onClick={() => {
+                  // En móvil, cerrar al navegar
+                  if (!isDesktop) setIsOpen(false)
+                }}
               >
                 {Icon && <Icon size={20} />}
                 {(isOpen || isDesktop) && <span className="truncate">{item.label}</span>}
