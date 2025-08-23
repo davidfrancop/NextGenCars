@@ -3,17 +3,17 @@
 import type { Context } from "../context"
 
 /* =========================
-   Utilidades de validación
+   Validation utilities
    ========================= */
 const normalizePlate = (raw?: string | null) =>
   (raw ?? "").toUpperCase().replace(/\s+/g, " ").trim()
 
 const isPlateFormatValid = (plate: string) =>
-  /^[A-Z0-9\- ]{4,12}$/.test(plate) // letras/números + espacio/guion (4–12)
+  /^[A-Z0-9\- ]{4,12}$/.test(plate) // letters/numbers + space/hyphen (4–12)
 
 const normalizeVIN = (raw?: string | null) => (raw ?? "").toUpperCase().trim()
 
-// 17 típico; dejamos 11–20 por flexibilidad
+// 17 is typical; allow 11–20 for flexibility (keeps len check client-side tolerant)
 const isVINLengthValid = (vin: string) => vin.length >= 11 && vin.length <= 20
 
 const isHSNValid = (hsn?: string | null) => !!hsn && /^[A-Z0-9]{4}$/.test(hsn.toUpperCase())
@@ -25,39 +25,37 @@ const isYearValid = (year?: number | null) =>
 const isKmValid = (km?: number | null) =>
   typeof km === "number" && km >= 0 && km <= 2_000_000
 
-// Entrada: String ISO o string numérico (epoch ms). Devuelve Date o undefined.
-const toDateOrUndefined = (raw?: string | null): Date | undefined => {
-  if (!raw) return undefined
-  let d: Date
-  if (/^\d+$/.test(raw)) d = new Date(Number(raw)) // "1767830400000"
-  else d = new Date(raw)
-  return isNaN(d.getTime()) ? undefined : d
-}
-
-// Salida: normaliza Date | number | string a ISO; null si no válido
-const toIsoString = (v: any): string | null => {
-  if (!v) return null
-  if (v instanceof Date) return v.toISOString()
-  if (typeof v === "number") return new Date(v).toISOString()
-  if (typeof v === "string") {
-    if (/^\d+$/.test(v)) return new Date(Number(v)).toISOString()
-    const d = new Date(v)
-    return isNaN(d.getTime()) ? null : d.toISOString()
+/** Accepts Date | "YYYY-MM-DD" | ISO | epoch(ms string/number) → Date | undefined */
+const toDateOrUndefined = (raw?: Date | string | number | null): Date | undefined => {
+  if (raw == null || raw === "") return undefined
+  if (raw instanceof Date) return isNaN(raw.getTime()) ? undefined : raw
+  if (typeof raw === "number") {
+    const d = new Date(raw)
+    return isNaN(d.getTime()) ? undefined : d
   }
-  return null
+  if (typeof raw === "string") {
+    if (/^\d+$/.test(raw)) {
+      const d = new Date(Number(raw))
+      return isNaN(d.getTime()) ? undefined : d
+    }
+    // "YYYY-MM-DD" → midnight UTC of that day
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      const d = new Date(`${raw}T00:00:00Z`)
+      return isNaN(d.getTime()) ? undefined : d
+    }
+    // ISO or other parseable formats
+    const d = new Date(raw)
+    return isNaN(d.getTime()) ? undefined : d
+  }
+  return undefined
 }
 
 export const vehicleResolvers = {
-  /* Campos de tipo (resuelven relaciones y normalizan fechas) */
+  /* Field resolvers: only relations; dates are serialized by GraphQL Date/DateTime scalars */
   Vehicle: {
     client: async (parent: { client_id: number }, _args: unknown, { db }: Context) => {
       return db.clients.findUnique({ where: { client_id: parent.client_id } })
     },
-    // ⬇️ Normalización de fechas a ISO en respuestas GraphQL
-    tuv_date: (parent: any) => toIsoString(parent?.tuv_date),
-    last_service_date: (parent: any) => toIsoString(parent?.last_service_date),
-    created_at: (parent: any) => toIsoString(parent?.created_at),
-    updated_at: (parent: any) => toIsoString(parent?.updated_at),
   },
 
   Query: {
@@ -92,44 +90,44 @@ export const vehicleResolvers = {
         drive: string
         transmission: string
         km: number
-        tuv_date?: string | null
-        last_service_date?: string | null
+        tuv_date?: Date | string | number | null
+        last_service_date?: Date | string | number | null
       },
       { db }: Context
     ) => {
-      // Normalización
+      // Normalize
       const license_plate = normalizePlate(args.license_plate)
       const vin = normalizeVIN(args.vin)
       const hsn = args.hsn.toUpperCase()
       const tsn = args.tsn.toUpperCase()
 
-      // Validaciones
+      // Validate
       if (!isPlateFormatValid(license_plate)) {
-        throw new Error("Formato de matrícula inválido. Use letras/números con espacios o guiones (4–12).")
+        throw new Error("Invalid license plate format. Use 4–12 alphanumerics with spaces or hyphens.")
       }
       if (!isVINLengthValid(vin)) {
-        throw new Error("VIN inválido. Debe tener entre 11 y 20 caracteres (17 habitual).")
+        throw new Error("Invalid VIN. Must be between 11 and 20 characters (17 typical).")
       }
       if (!isHSNValid(hsn)) {
-        throw new Error("HSN inválido. Debe ser alfanumérico de 4 caracteres.")
+        throw new Error("Invalid HSN. Must be exactly 4 alphanumeric characters.")
       }
       if (!isTSNValid(tsn)) {
-        throw new Error("TSN inválido. Debe ser alfanumérico de 3 caracteres.")
+        throw new Error("Invalid TSN. Must be exactly 3 alphanumeric characters.")
       }
       if (!isYearValid(args.year)) {
-        throw new Error("Año inválido. Debe estar entre 1950 y 2100.")
+        throw new Error("Invalid year. Must be between 1950 and 2100.")
       }
       if (!isKmValid(args.km)) {
-        throw new Error("KM inválido. Debe ser un número entre 0 y 2,000,000.")
+        throw new Error("Invalid mileage. Must be a non-negative integer ≤ 2,000,000.")
       }
 
-      // Unicidad
+      // Uniqueness
       const [plateExists, vinExists] = await Promise.all([
         db.vehicles.findUnique({ where: { license_plate } }),
         db.vehicles.findUnique({ where: { vin } }),
       ])
-      if (plateExists) throw new Error("La matrícula ya existe.")
-      if (vinExists) throw new Error("El VIN ya existe.")
+      if (plateExists) throw new Error("License plate already exists.")
+      if (vinExists) throw new Error("VIN already exists.")
 
       try {
         return await db.vehicles.create({
@@ -146,16 +144,17 @@ export const vehicleResolvers = {
             drive: args.drive,
             transmission: args.transmission,
             km: args.km,
+            // Date-only fields (GraphQL Date): accept Date | "YYYY-MM-DD" | ISO | epoch
             tuv_date: toDateOrUndefined(args.tuv_date),
             last_service_date: toDateOrUndefined(args.last_service_date),
           },
         })
       } catch (err: any) {
         if (err?.code === "P2002") {
-          const target = (err.meta?.target as string[])?.join(", ") || "campo único"
-          if (target.includes("vin")) throw new Error("El VIN ya existe.")
-          if (target.includes("license_plate")) throw new Error("La matrícula ya existe.")
-          throw new Error(`Conflicto de unicidad en ${target}.`)
+          const target = (err.meta?.target as string[])?.join(", ") || "unique field"
+          if (target.includes("vin")) throw new Error("VIN already exists.")
+          if (target.includes("license_plate")) throw new Error("License plate already exists.")
+          throw new Error(`Uniqueness conflict on ${target}.`)
         }
         throw err
       }
@@ -168,7 +167,7 @@ export const vehicleResolvers = {
         make?: string
         model?: string
         year?: number
-        // Alias 'plate' desde el front; Prisma usa 'license_plate'
+        // Accept 'plate' alias from the frontend; DB uses 'license_plate'
         plate?: string
         license_plate?: string
         vin?: string
@@ -178,64 +177,67 @@ export const vehicleResolvers = {
         drive?: string
         transmission?: string
         km?: number
-        tuv_date?: string | null
-        last_service_date?: string | null
+        tuv_date?: Date | string | number | null
+        last_service_date?: Date | string | number | null
       },
       { db }: Context
     ) => {
       const { vehicle_id, ...rest } = args
 
-      // Matrícula: soporta 'plate' o 'license_plate'
+      // License plate (supports 'plate' or 'license_plate')
       const incomingPlate = rest.plate ?? rest.license_plate
       let license_plate: string | undefined
       if (typeof incomingPlate === "string") {
         license_plate = normalizePlate(incomingPlate)
         if (!isPlateFormatValid(license_plate)) {
-          throw new Error("Formato de matrícula inválido. Use letras/números con espacios o guiones (4–12).")
+          throw new Error("Invalid license plate format. Use 4–12 alphanumerics with spaces or hyphens.")
         }
         const conflict = await db.vehicles.findUnique({ where: { license_plate } })
         if (conflict && conflict.vehicle_id !== vehicle_id) {
-          throw new Error("La matrícula ya existe.")
+          throw new Error("License plate already exists.")
         }
       }
 
+      // VIN
       let vin: string | undefined = rest.vin
       if (typeof vin === "string") {
         vin = normalizeVIN(vin)
         if (!isVINLengthValid(vin)) {
-          throw new Error("VIN inválido. Debe tener entre 11 y 20 caracteres (17 habitual).")
+          throw new Error("Invalid VIN. Must be between 11 and 20 characters (17 typical).")
         }
         const conflictVin = await db.vehicles.findUnique({ where: { vin } })
         if (conflictVin && conflictVin.vehicle_id !== vehicle_id) {
-          throw new Error("El VIN ya existe.")
+          throw new Error("VIN already exists.")
         }
       }
 
+      // HSN
       let hsn: string | undefined = rest.hsn
       if (typeof hsn === "string") {
         hsn = hsn.toUpperCase()
         if (!isHSNValid(hsn)) {
-          throw new Error("HSN inválido. Debe ser alfanumérico de 4 caracteres.")
+          throw new Error("Invalid HSN. Must be exactly 4 alphanumeric characters.")
         }
       }
 
+      // TSN
       let tsn: string | undefined = rest.tsn
       if (typeof tsn === "string") {
         tsn = tsn.toUpperCase()
         if (!isTSNValid(tsn)) {
-          throw new Error("TSN inválido. Debe ser alfanumérico de 3 caracteres.")
+          throw new Error("Invalid TSN. Must be exactly 3 alphanumeric characters.")
         }
       }
 
+      // Year and mileage
       if (typeof rest.year === "number" && !isYearValid(rest.year)) {
-        throw new Error("Año inválido. Debe estar entre 1950 y 2100.")
+        throw new Error("Invalid year. Must be between 1950 and 2100.")
       }
-
       if (typeof rest.km === "number" && !isKmValid(rest.km)) {
-        throw new Error("KM inválido. Debe ser un número entre 0 y 2,000,000.")
+        throw new Error("Invalid mileage. Must be a non-negative integer ≤ 2,000,000.")
       }
 
-      // Fechas (si vienen) — aceptan ISO y epoch ms (string)
+      // Dates (if provided)
       const tuvDate =
         rest.tuv_date === undefined ? undefined : toDateOrUndefined(rest.tuv_date)
       const lastServiceDate =
@@ -263,10 +265,10 @@ export const vehicleResolvers = {
         return updated
       } catch (err: any) {
         if (err?.code === "P2002") {
-          const target = (err.meta?.target as string[])?.join(", ") || "campo único"
-          if (target.includes("vin")) throw new Error("El VIN ya existe.")
-          if (target.includes("license_plate")) throw new Error("La matrícula ya existe.")
-          throw new Error(`Conflicto de unicidad en ${target}.`)
+          const target = (err.meta?.target as string[])?.join(", ") || "unique field"
+          if (target.includes("vin")) throw new Error("VIN already exists.")
+          if (target.includes("license_plate")) throw new Error("License plate already exists.")
+          throw new Error(`Uniqueness conflict on ${target}.`)
         }
         throw err
       }
