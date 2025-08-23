@@ -7,13 +7,8 @@ import { SEARCH_CLIENTS } from "@/graphql/queries/searchClients"
 import { GET_VEHICLES } from "@/graphql/queries/getVehicles"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import Toast, { type ToastState } from "@/components/common/Toast" // ✅ usa el toast común
-// Local helper for converting YYYY-MM-DD to ISO string or null
-function toISODateOrNull(date: string): string | null {
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null
-  const d = new Date(`${date}T00:00:00Z`)
-  return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10)
-}
+import Toast, { type ToastState } from "@/components/common/Toast"
+import { toDateOnlyOrNull } from "@/utils/Date" // ✅ send "YYYY-MM-DD" to GraphQL Date
 
 type ClientLite = {
   client_id: number
@@ -58,11 +53,11 @@ export default function CreateVehicle() {
   const [selectedClient, setSelectedClient] = useState<ClientLite | null>(null)
   const [pickerOpen, setPickerOpen] = useState<boolean>(!preId)
 
-  // ✅ Toast común
+  // Toast + inline error
   const [toast, setToast] = useState<ToastState>(null)
   const [err, setErr] = useState<string | null>(null)
 
-  // Prefill client
+  // Prefill client if query param present
   const { data: preClientData } = useQuery(GET_CLIENT_BY_ID, {
     variables: { client_id: preId ?? 0 },
     skip: !preId,
@@ -83,7 +78,7 @@ export default function CreateVehicle() {
     }
   }, [preId, preClientData])
 
-  // Typeahead search
+  // Typeahead search (clients)
   const [term, setTerm] = useState("")
   const [skip, setSkip] = useState(0)
   const TAKE = 20
@@ -92,7 +87,7 @@ export default function CreateVehicle() {
     fetchPolicy: "network-only",
   })
 
-  // debounce search
+  // Debounce search
   const debTimer = useRef<number | null>(null)
   useEffect(() => {
     if (!pickerOpen) return
@@ -133,9 +128,9 @@ export default function CreateVehicle() {
     drive: "",
     transmission: "",
     km: "",
-    // NEW fields
-    tuv_date: "",            // YYYY-MM-DD -> DateTime?
-    last_service_date: "",   // YYYY-MM-DD -> DateTime?
+    // Date-only fields
+    tuv_date: "",          // YYYY-MM-DD
+    last_service_date: "", // YYYY-MM-DD
   })
 
   const setField = (k: keyof typeof form, v: string) => setForm((s) => ({ ...s, [k]: v }))
@@ -226,9 +221,9 @@ export default function CreateVehicle() {
         drive: form.drive,
         transmission: form.transmission,
         km: Number(form.km),
-        // NEW optional dates — only send if valid
-        ...(form.tuv_date ? { tuv_date: toISODateOrNull(form.tuv_date) } : {}),
-        ...(form.last_service_date ? { last_service_date: toISODateOrNull(form.last_service_date) } : {}),
+        // Date-only fields — send only if present and valid
+        ...(form.tuv_date ? { tuv_date: toDateOnlyOrNull(form.tuv_date) } : {}),
+        ...(form.last_service_date ? { last_service_date: toDateOnlyOrNull(form.last_service_date) } : {}),
       },
     })
   }
@@ -389,7 +384,7 @@ export default function CreateVehicle() {
               type="text"
               inputMode="text"
               maxLength={12}
-              pattern="^[A-Za-z0-9\\- ]{4,12}$"
+              pattern="^[A-Za-z0-9\- ]{4,12}$"
               required
             />
           </div>
@@ -550,7 +545,7 @@ export default function CreateVehicle() {
         </div>
       </form>
 
-      {/* ✅ Toast común */}
+      {/* Toast */}
       {toast && (
         <Toast
           type={toast.type}
