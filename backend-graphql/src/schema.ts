@@ -7,6 +7,7 @@ import type { Context } from "./context"
 export const schema = createSchema<Context>({
   typeDefs: /* GraphQL */ `
     scalar DateTime
+    scalar Date
 
     enum ClientType {
       PERSONAL
@@ -60,8 +61,8 @@ export const schema = createSchema<Context>({
       drive: String!
       transmission: String!
       km: Int!
-      tuv_date: DateTime
-      last_service_date: DateTime
+      tuv_date: Date
+      last_service_date: Date
       client: Client
     }
 
@@ -174,8 +175,8 @@ export const schema = createSchema<Context>({
         drive: String!
         transmission: String!
         km: Int!
-        tuv_date: DateTime
-        last_service_date: DateTime
+        tuv_date: Date
+        last_service_date: Date
       ): Vehicle!
 
       updateVehicle(
@@ -193,8 +194,8 @@ export const schema = createSchema<Context>({
         drive: String
         transmission: String
         km: Int
-        tuv_date: DateTime
-        last_service_date: DateTime
+        tuv_date: Date
+        last_service_date: Date
       ): Vehicle!
 
       deleteVehicle(vehicleId: Int!): Boolean!
