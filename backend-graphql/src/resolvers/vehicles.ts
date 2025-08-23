@@ -13,7 +13,7 @@ const isPlateFormatValid = (plate: string) =>
 
 const normalizeVIN = (raw?: string | null) => (raw ?? "").toUpperCase().trim()
 
-// 17 is typical; allow 11–20 for flexibility (keeps len check client-side tolerant)
+// 17 is typical; allow 11–20 for flexibility
 const isVINLengthValid = (vin: string) => vin.length >= 11 && vin.length <= 20
 
 const isHSNValid = (hsn?: string | null) => !!hsn && /^[A-Z0-9]{4}$/.test(hsn.toUpperCase())
@@ -51,7 +51,7 @@ const toDateOrUndefined = (raw?: Date | string | number | null): Date | undefine
 }
 
 export const vehicleResolvers = {
-  /* Field resolvers: only relations; dates are serialized by GraphQL Date/DateTime scalars */
+  /* Field resolvers: only relations; scalars serialize dates */
   Vehicle: {
     client: async (parent: { client_id: number }, _args: unknown, { db }: Context) => {
       return db.clients.findUnique({ where: { client_id: parent.client_id } })
@@ -121,9 +121,9 @@ export const vehicleResolvers = {
         throw new Error("Invalid mileage. Must be a non-negative integer ≤ 2,000,000.")
       }
 
-      // Ensure client exists
-      const client = await db.clients.findUnique({ where: { client_id: args.client_id } })
-      if (!client) throw new Error("Target client not found.")
+      // FK exists
+      const clientExists = await db.clients.findUnique({ where: { client_id: args.client_id } })
+      if (!clientExists) throw new Error("Client not found.")
 
       // Uniqueness
       const [plateExists, vinExists] = await Promise.all([
@@ -168,7 +168,7 @@ export const vehicleResolvers = {
       _: unknown,
       args: {
         vehicle_id: number
-        client_id?: number
+        client_id?: number           // 👈 allow reassignment
         make?: string
         model?: string
         year?: number
@@ -189,11 +189,10 @@ export const vehicleResolvers = {
     ) => {
       const { vehicle_id, ...rest } = args
 
-      // If client_id changes, ensure the target client exists
-      let nextClientId: number | undefined = rest.client_id
-      if (typeof nextClientId === "number") {
-        const targetClient = await db.clients.findUnique({ where: { client_id: nextClientId } })
-        if (!targetClient) throw new Error("Target client not found.")
+      // Optional: verify target client exists if provided
+      if (typeof rest.client_id === "number") {
+        const client = await db.clients.findUnique({ where: { client_id: rest.client_id } })
+        if (!client) throw new Error("Client not found.")
       }
 
       // License plate (supports 'plate' or 'license_plate')
@@ -210,7 +209,7 @@ export const vehicleResolvers = {
         }
       }
 
-      // VIN
+      // VIN uniqueness
       let vin: string | undefined = rest.vin
       if (typeof vin === "string") {
         vin = normalizeVIN(vin)
@@ -259,7 +258,7 @@ export const vehicleResolvers = {
         const updated = await db.vehicles.update({
           where: { vehicle_id },
           data: {
-            ...(nextClientId !== undefined ? { client_id: nextClientId } : {}),
+            ...(typeof rest.client_id === "number" ? { client_id: rest.client_id } : {}),
             ...(rest.make !== undefined ? { make: rest.make?.trim() } : {}),
             ...(rest.model !== undefined ? { model: rest.model?.trim() } : {}),
             ...(rest.year !== undefined ? { year: rest.year } : {}),
