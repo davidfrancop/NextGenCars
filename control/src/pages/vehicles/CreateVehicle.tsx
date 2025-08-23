@@ -8,7 +8,12 @@ import { GET_VEHICLES } from "@/graphql/queries/getVehicles"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import Toast, { type ToastState } from "@/components/common/Toast" // ✅ usa el toast común
-import { parseDateEU } from "@/utils/Date"                         // ✅ nuevo helper EU
+// Local helper for converting YYYY-MM-DD to ISO string or null
+function toISODateOrNull(date: string): string | null {
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null
+  const d = new Date(`${date}T00:00:00Z`)
+  return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10)
+}
 
 type ClientLite = {
   client_id: number
@@ -28,7 +33,6 @@ function displayClientName(c?: ClientLite | null) {
 
 // --- Helpers / constants ---
 const normalizePlate = (v: string) => v.toUpperCase().replace(/\s+/g, " ").trim()
-const EU_DATE_RE = /^\d{2}\/\d{2}\/\d{4}$/ // dd/MM/yyyy
 
 const FUEL_OPTIONS = [
   "Gasoline",
@@ -116,12 +120,12 @@ export default function CreateVehicle() {
     })
   }
 
-  // Vehicle form (guardamos fechas en dd/MM/yyyy)
+  // Vehicle form
   const [form, setForm] = useState({
     make: "",
     model: "",
-    registration_date: "", // dd/MM/yyyy (derive year for backend)
-    plate: "",             // maps to license_plate
+    registration_date: "", // YYYY-MM-DD (derive year for backend)
+    plate: "", // maps to license_plate
     vin: "",
     hsn: "",
     tsn: "",
@@ -129,9 +133,9 @@ export default function CreateVehicle() {
     drive: "",
     transmission: "",
     km: "",
-    // NEW fields EU
-    tuv_date: "",            // dd/MM/yyyy -> DateTime
-    last_service_date: "",   // dd/MM/yyyy -> DateTime
+    // NEW fields
+    tuv_date: "",            // YYYY-MM-DD -> DateTime?
+    last_service_date: "",   // YYYY-MM-DD -> DateTime?
   })
 
   const setField = (k: keyof typeof form, v: string) => setForm((s) => ({ ...s, [k]: v }))
@@ -159,14 +163,12 @@ export default function CreateVehicle() {
     },
   })
 
-  // ---------- Validaciones ----------
-  const validateEUDate = (value: string, label: string, opts?: { required?: boolean }) => {
-    if (!value) return opts?.required ? `${label} is required` : null
-    if (!EU_DATE_RE.test(value)) return `${label} must be dd/MM/yyyy`
-    const iso = parseDateEU(value)
-    if (!iso) return `Invalid ${label.toLowerCase()}`
-    const d = new Date(iso)
+  const validateDate = (yyyyMmDd: string, label: string, opts?: { required?: boolean }) => {
+    if (!yyyyMmDd) return opts?.required ? `${label} is required` : null
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(yyyyMmDd)) return `${label} must be YYYY-MM-DD`
+    const d = new Date(`${yyyyMmDd}T00:00:00Z`)
     const year = d.getUTCFullYear()
+    if (isNaN(d.getTime())) return `Invalid ${label.toLowerCase()}`
     if (year < 1950 || year > 2100) return `${label} must be between 1950 and 2100`
     return null
   }
@@ -177,13 +179,13 @@ export default function CreateVehicle() {
     if (!form.model.trim()) return "Model is required"
 
     // Registration date (required) -> derive year
-    const regErr = validateEUDate(form.registration_date, "Registration date", { required: true })
+    const regErr = validateDate(form.registration_date, "Registration date", { required: true })
     if (regErr) return regErr
 
     // Optional dates (TÜV & last service)
-    const tuvErr = form.tuv_date ? validateEUDate(form.tuv_date, "TÜV/Inspection date") : null
+    const tuvErr = form.tuv_date ? validateDate(form.tuv_date, "TÜV/Inspection date") : null
     if (tuvErr) return tuvErr
-    const lastServErr = form.last_service_date ? validateEUDate(form.last_service_date, "Last service date") : null
+    const lastServErr = form.last_service_date ? validateDate(form.last_service_date, "Last service date") : null
     if (lastServErr) return lastServErr
 
     if (!/^[A-Za-z0-9\- ]{4,12}$/.test(form.plate.trim())) return "Invalid license plate (4–12, letters/numbers, spaces or hyphens)"
@@ -199,7 +201,6 @@ export default function CreateVehicle() {
     return null
   }
 
-  // ---------- Submit ----------
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const v = validate()
@@ -209,9 +210,7 @@ export default function CreateVehicle() {
     }
     setErr(null)
 
-    // Derive year from EU registration date
-    const regISO = parseDateEU(form.registration_date)!
-    const year = new Date(regISO).getUTCFullYear()
+    const year = new Date(`${form.registration_date}T00:00:00Z`).getUTCFullYear()
 
     await createVehicle({
       variables: {
@@ -227,9 +226,9 @@ export default function CreateVehicle() {
         drive: form.drive,
         transmission: form.transmission,
         km: Number(form.km),
-        // NEW optional dates — send ISO if provided
-        ...(form.tuv_date ? { tuv_date: parseDateEU(form.tuv_date) } : {}),
-        ...(form.last_service_date ? { last_service_date: parseDateEU(form.last_service_date) } : {}),
+        // NEW optional dates — only send if valid
+        ...(form.tuv_date ? { tuv_date: toISODateOrNull(form.tuv_date) } : {}),
+        ...(form.last_service_date ? { last_service_date: toISODateOrNull(form.last_service_date) } : {}),
       },
     })
   }
@@ -352,14 +351,11 @@ export default function CreateVehicle() {
               value={form.registration_date}
               onChange={onChange("registration_date")}
               className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
-              type="text"
-              placeholder="dd/MM/yyyy"
-              inputMode="numeric"
+              type="date"
+              min="1950-01-01"
+              max="2100-12-31"
               required
             />
-            <p className="text-xs text-zinc-400 mt-1">
-              European format <span className="font-mono">dd/MM/yyyy</span>. Year is derived automatically.
-            </p>
           </div>
 
           <div>
@@ -459,9 +455,10 @@ export default function CreateVehicle() {
               value={form.tuv_date}
               onChange={onChange("tuv_date")}
               className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
-              type="text"
-              placeholder="dd/MM/yyyy"
-              inputMode="numeric"
+              type="date"
+              min="2000-01-01"
+              max="2100-12-31"
+              placeholder="YYYY-MM-DD"
             />
           </div>
         </div>
@@ -525,9 +522,10 @@ export default function CreateVehicle() {
             value={form.last_service_date}
             onChange={onChange("last_service_date")}
             className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
-            type="text"
-            placeholder="dd/MM/yyyy"
-            inputMode="numeric"
+            type="date"
+            min="2000-01-01"
+            max="2100-12-31"
+            placeholder="YYYY-MM-DD"
           />
           <p className="text-xs text-zinc-400 mt-1">
             Optional. Helps the workshop plan next maintenance.
