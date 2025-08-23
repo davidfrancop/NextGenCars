@@ -6,7 +6,7 @@ import { GET_CLIENTS } from "@/graphql/queries/getClients"
 import { DELETE_CLIENT } from "@/graphql/mutations/deleteClient"
 import { Users, Pencil, Plus, Car } from "lucide-react"
 import { useState } from "react"
-import Delete from "@/components/common/Delete" // ⬅️ usa el Delete genérico (no-Apollo)
+import Delete from "@/components/common/Delete"
 
 function fullClientName(c: any) {
   if (c.type === "COMPANY") return c.company_name ?? "—"
@@ -45,7 +45,7 @@ export default function Clients() {
     fetchPolicy: "cache-and-network",
   })
 
-  // Mutación simple; el toast/confirmación los maneja el <Delete />
+  // La mutación vive aquí; el modal + toast lo maneja <Delete />
   const [deleteClient, { loading: deleting }] = useMutation(DELETE_CLIENT)
 
   return (
@@ -66,7 +66,7 @@ export default function Clients() {
         </Link>
       </div>
 
-      {/* Tabs filtro: All / Personal / Company */}
+      {/* Filtro All / Personal / Company */}
       <div className="mb-4 flex items-center gap-2">
         {([
           { label: "All", value: null },
@@ -167,19 +167,19 @@ export default function Clients() {
                           <Pencil size={18} />
                         </Link>
 
-                        {/* ✅ Borrar con componente genérico */}
                         <Delete
                           iconOnly
                           title="Delete client"
                           text="This action cannot be undone. Do you want to delete this client?"
                           successMessage="Client deleted"
                           errorMessage="Failed to delete client"
+                          className="inline-flex text-red-500 hover:text-red-400 disabled:opacity-50"
                           onDelete={async () => {
-                            // OJO: tu backend espera { clientId } (camelCase), no client_id
+                            // Backend espera camelCase: { clientId }
                             await deleteClient({ variables: { clientId: c.client_id } })
                             await refetch()
                           }}
-                          className="inline-flex text-red-500 hover:text-red-400 disabled:opacity-50"
+                          disabled={deleting}
                         />
                       </div>
                     </td>
