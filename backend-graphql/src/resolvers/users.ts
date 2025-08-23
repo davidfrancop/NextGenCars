@@ -7,38 +7,52 @@ import { GraphQLError } from "graphql"
 
 function signToken(user: { user_id: number; email: string; role: string }) {
   const secret = process.env.JWT_SECRET
-  if (!secret) {
-    throw new Error("JWT_SECRET is not set")
+  if (!secret) throw new Error("JWT_SECRET is not set")
+  return jwt.sign({ sub: user.user_id, email: user.email, role: user.role }, secret, { expiresIn: "7d" })
+}
+
+// Helper para serializar fechas a ISO de forma segura
+function withIsoDates<T extends { created_at?: any; updated_at?: any }>(row: T) {
+  return {
+    ...row,
+    created_at: row?.created_at instanceof Date ? row.created_at.toISOString() : row?.created_at ?? null,
+    updated_at: row?.updated_at instanceof Date ? row.updated_at.toISOString() : row?.updated_at ?? null,
   }
-  return jwt.sign(
-    { sub: user.user_id, email: user.email, role: user.role },
-    secret,
-    { expiresIn: "7d" }
-  )
 }
 
 export const userResolvers = {
   Query: {
     users: async (_: unknown, __: unknown, { db }: Context) => {
-      const list = await db.users.findMany({ orderBy: { created_at: "desc" } })
-      // 🔹 normalizamos el campo a ISO string para evitar "Invalid Date" en frontend
-      return list.map((u) => ({
-        ...u,
-        created_at: u.created_at ? new Date(u.created_at).toISOString() : null,
-      }))
+      const rows = await db.users.findMany({
+        orderBy: { created_at: "desc" },
+        select: {
+          user_id: true,
+          username: true,
+          email: true,
+          role: true,
+          created_at: true,
+          updated_at: true,
+        },
+      })
+      return rows.map(withIsoDates)
     },
 
     user: async (_: unknown, { userId }: { userId: number }, { db }: Context) => {
-      const found = await db.users.findUnique({ where: { user_id: userId } })
+      const found = await db.users.findUnique({
+        where: { user_id: userId },
+        select: {
+          user_id: true,
+          username: true,
+          email: true,
+          role: true,
+          created_at: true,
+          updated_at: true,
+        },
+      })
       if (!found) {
-        throw new GraphQLError("User not found", {
-          extensions: { code: "NOT_FOUND" },
-        })
+        throw new GraphQLError("Usuario no encontrado", { extensions: { code: "NOT_FOUND" } })
       }
-      return {
-        ...found,
-        created_at: found.created_at ? new Date(found.created_at).toISOString() : null,
-      }
+      return withIsoDates(found)
     },
   },
 
@@ -53,126 +67,110 @@ export const userResolvers = {
 
       const exists = await db.users.findUnique({ where: { email } })
       if (exists) {
-        throw new GraphQLError("Email already in use", {
-          extensions: { code: "BAD_USER_INPUT" },
-        })
+        throw new GraphQLError("Email ya está en uso", { extensions: { code: "BAD_USER_INPUT" } })
       }
 
-      const newUser = await db.users.create({
+      const created = await db.users.create({
         data: {
           username,
           email,
           role,
           password_hash,
-          created_at: new Date(), // 🔹 aseguramos fecha al crear
+          // por si tu esquema no tiene @default(now()) o hay motores que no lo aplican
+          created_at: new Date(),
+        },
+        select: {
+          user_id: true,
+          username: true,
+          email: true,
+          role: true,
+          created_at: true,
+          updated_at: true,
         },
       })
-
-      return {
-        ...newUser,
-        created_at: newUser.created_at.toISOString(),
-      }
+      return withIsoDates(created)
     },
 
     updateUser: async (
       _: unknown,
-      args: {
-        userId: number
-        username: string
-        email: string
-        role: string
-        password?: string
-      },
+      args: { userId: number; username: string; email: string; role: string; password?: string },
       { db }: Context
     ) => {
       const { userId, username, email, role, password } = args
+
       const existing = await db.users.findUnique({ where: { user_id: userId } })
       if (!existing) {
-        throw new GraphQLError("User not found", {
-          extensions: { code: "NOT_FOUND" },
-        })
+        throw new GraphQLError("Usuario no encontrado", { extensions: { code: "NOT_FOUND" } })
       }
 
       if (email !== existing.email) {
         const emailTaken = await db.users.findUnique({ where: { email } })
         if (emailTaken) {
-          throw new GraphQLError("Email already in use", {
-            extensions: { code: "BAD_USER_INPUT" },
-          })
+          throw new GraphQLError("Email ya está en uso", { extensions: { code: "BAD_USER_INPUT" } })
         }
       }
 
-      const updateData: any = { username, email, role }
+      const data: any = { username, email, role }
       if (password && password.trim() !== "") {
-        updateData.password_hash = await bcrypt.hash(password, 10)
+        data.password_hash = await bcrypt.hash(password, 10)
       }
 
       const updated = await db.users.update({
         where: { user_id: userId },
-        data: updateData,
+        data,
+        select: {
+          user_id: true,
+          username: true,
+          email: true,
+          role: true,
+          created_at: true,
+          updated_at: true,
+        },
       })
-
-      return {
-        ...updated,
-        created_at: updated.created_at ? new Date(updated.created_at).toISOString() : null,
-      }
+      return withIsoDates(updated)
     },
 
-    loginUser: async (
-      _: unknown,
-      args: { email: string; password: string },
-      { db }: Context
-    ) => {
+    loginUser: async (_: unknown, args: { email: string; password: string }, { db }: Context) => {
       const { email, password } = args
       const user = await db.users.findUnique({ where: { email } })
       if (!user) {
-        throw new GraphQLError("Invalid credentials", {
-          extensions: { code: "UNAUTHENTICATED" },
-        })
+        throw new GraphQLError("Invalid credentials", { extensions: { code: "UNAUTHENTICATED" } })
       }
-
       const ok = await bcrypt.compare(password, user.password_hash)
       if (!ok) {
-        throw new GraphQLError("Invalid credentials", {
-          extensions: { code: "UNAUTHENTICATED" },
-        })
+        throw new GraphQLError("Invalid credentials", { extensions: { code: "UNAUTHENTICATED" } })
       }
-
       const token = signToken(user)
       return { token }
     },
 
-    deleteUser: async (
-      _: unknown,
-      args: { userId: number },
-      { db, user }: Context
-    ) => {
+    deleteUser: async (_: unknown, args: { userId: number }, { db, user }: Context) => {
       const { userId } = args
 
       if (user && user.sub && Number(user.sub) === userId) {
-        throw new GraphQLError("You cannot delete your own account.", {
-          extensions: { code: "FORBIDDEN" },
-        })
+        throw new GraphQLError("No puedes eliminar tu propio usuario.", { extensions: { code: "FORBIDDEN" } })
       }
-
       if (userId === 1) {
-        throw new GraphQLError("Primary admin cannot be deleted.", {
-          extensions: { code: "FORBIDDEN" },
-        })
+        throw new GraphQLError("No se puede eliminar el admin principal.", { extensions: { code: "FORBIDDEN" } })
       }
 
       const toDelete = await db.users.findUnique({ where: { user_id: userId } })
       if (!toDelete) {
-        throw new GraphQLError("User not found.", {
-          extensions: { code: "NOT_FOUND" },
-        })
+        throw new GraphQLError("Usuario no encontrado.", { extensions: { code: "NOT_FOUND" } })
       }
 
-      const deleted = await db.users.delete({ where: { user_id: userId } })
-      return {
-        ...deleted,
-        created_at: deleted.created_at ? new Date(deleted.created_at).toISOString() : null,
-      }
+      const deleted = await db.users.delete({
+        where: { user_id: userId },
+        select: {
+          user_id: true,
+          username: true,
+          email: true,
+          role: true,
+          created_at: true,
+          updated_at: true,
+        },
+      })
+      return withIsoDates(deleted)
     },
   },
 }

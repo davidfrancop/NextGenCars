@@ -6,6 +6,8 @@ import type { Context } from "./context"
 
 export const schema = createSchema<Context>({
   typeDefs: /* GraphQL */ `
+    scalar DateTime
+
     enum ClientType {
       PERSONAL
       COMPANY
@@ -16,7 +18,7 @@ export const schema = createSchema<Context>({
       username: String!
       email: String!
       role: String!
-      created_at: String
+      created_at: DateTime
     }
 
     type Client {
@@ -37,8 +39,8 @@ export const schema = createSchema<Context>({
       city: String
       postal_code: String
       type: ClientType!
-      created_at: String
-      updated_at: String
+      created_at: DateTime
+      updated_at: DateTime
       vehicles: [Vehicle!]!
     }
 
@@ -50,16 +52,16 @@ export const schema = createSchema<Context>({
       year: Int!
       license_plate: String!
       vin: String!
-      created_at: String
-      updated_at: String
-      hsn: String!          # ← NOT NULL en DB
-      tsn: String!          # ← NOT NULL en DB
-      fuel_type: String!    # ← NOT NULL en DB
-      drive: String!        # ← NOT NULL en DB
-      transmission: String! # ← NOT NULL en DB
-      km: Int!              # ← NOT NULL en DB
-      tuv_date: String      # ← DateTime? en DB, expuesto como String ISO
-      last_service_date: String # ← DateTime? en DB, expuesto como String ISO
+      created_at: DateTime
+      updated_at: DateTime
+      hsn: String!
+      tsn: String!
+      fuel_type: String!
+      drive: String!
+      transmission: String!
+      km: Int!
+      tuv_date: DateTime
+      last_service_date: DateTime
       client: Client
     }
 
@@ -113,7 +115,7 @@ export const schema = createSchema<Context>({
       clientName: String!
       vehicleName: String!
       vehiclePlate: String!
-      createdAt: String!
+      createdAt: DateTime!
       status: String!
     }
 
@@ -135,12 +137,7 @@ export const schema = createSchema<Context>({
       appointmentsThisWeek: [AppointmentsPerDay!]!
 
       # Clients
-      clients(
-        type: ClientType
-        search: String
-        take: Int
-        skip: Int
-      ): [Client!]!
+      clients(type: ClientType, search: String, take: Int, skip: Int): [Client!]!
       client(client_id: Int!): Client
       personalClients: [Client!]!  # compat
 
@@ -171,15 +168,14 @@ export const schema = createSchema<Context>({
         year: Int!
         license_plate: String!
         vin: String!
-        hsn: String!           # ← requeridos
+        hsn: String!
         tsn: String!
         fuel_type: String!
         drive: String!
         transmission: String!
         km: Int!
-        # Opcionales nuevos:
-        tuv_date: String
-        last_service_date: String
+        tuv_date: DateTime
+        last_service_date: DateTime
       ): Vehicle!
 
       updateVehicle(
@@ -197,9 +193,8 @@ export const schema = createSchema<Context>({
         drive: String
         transmission: String
         km: Int
-        # Opcionales nuevos:
-        tuv_date: String
-        last_service_date: String
+        tuv_date: DateTime
+        last_service_date: DateTime
       ): Vehicle!
 
       deleteVehicle(vehicleId: Int!): Boolean!
