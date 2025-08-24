@@ -88,7 +88,7 @@ export default function Users() {
                   <td className="px-4 py-2 text-right">
                     <div className="flex items-center gap-3 justify-end">
                       <Link
-                        to={`/users/edit/${u.user_id}`}
+                        to={`/users/${u.user_id}/edit`}
                         className="inline-flex text-amber-400 hover:text-amber-300"
                         title="Edit user"
                         aria-label={`Edit user ${u.username}`}
