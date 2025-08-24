@@ -9,7 +9,7 @@ type ConfirmDialogProps = {
   text?: ReactNode
   confirmText?: string
   cancelText?: string
-  extraButtons?: ReactNode   // 👈 opcional: para más botones (ej: "Move")
+  extraButtons?: ReactNode   // optional: extra buttons (e.g., "Move")
   onCancel: () => void
   onConfirm: () => void
   loading?: boolean
@@ -21,12 +21,15 @@ export default function ConfirmDialog({
   text,
   confirmText = "Confirm",
   cancelText = "Cancel",
-  extraButtons,              // 👈 puedes pasar cualquier botón extra
+  extraButtons,
   onCancel,
   onConfirm,
   loading,
 }: ConfirmDialogProps) {
   if (!open) return null
+
+  const headingId = "confirm-heading"
+  const descId = text ? "confirm-desc" : undefined
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -34,6 +37,8 @@ export default function ConfirmDialog({
       <div
         role="dialog"
         aria-modal="true"
+        aria-labelledby={headingId}
+        aria-describedby={descId}
         className="relative w-full max-w-md rounded-lg bg-white dark:bg-slate-900 p-5 shadow-xl"
       >
         <button
@@ -44,11 +49,17 @@ export default function ConfirmDialog({
           <X />
         </button>
 
-        <h3 className="text-lg font-semibold mb-2">{title}</h3>
-        {text && <div className="text-sm text-slate-700 dark:text-slate-300 mb-4">{text}</div>}
+        <h3 id={headingId} className="text-lg font-semibold mb-2 text-left">
+          {title}
+        </h3>
+        {text && (
+          <div id={descId} className="text-sm text-slate-700 dark:text-slate-300 mb-4 text-left">
+            {text}
+          </div>
+        )}
 
         <div className="flex justify-end gap-2">
-          {extraButtons /* 👈 renderiza lo que pases, ej. otro botón */}
+          {extraButtons}
           <button
             className="px-3 py-1.5 rounded-md border border-slate-300 dark:border-slate-700"
             onClick={onCancel}

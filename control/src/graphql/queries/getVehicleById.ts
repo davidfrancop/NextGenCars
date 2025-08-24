@@ -24,6 +24,7 @@ export const GET_VEHICLE_BY_ID = gql`
       updated_at
       client {
         client_id
+        type
         first_name
         last_name
         company_name
