@@ -83,12 +83,16 @@ export default function EditVehicle() {
     onError: (err) => {
       setToast({ type: "error", msg: err.message || "Failed to update" })
     },
-    refetchQueries: [{ query: GET_VEHICLES }],
+    refetchQueries: [
+      { query: GET_VEHICLES },
+      { query: GET_VEHICLE_BY_ID, variables: { vehicle_id: id } }, // 👈 force refresh of details
+    ],
+    awaitRefetchQueries: true,
   })
 
-  // ---------- Client picker ----------
+  // ---------- Client picker state ----------
   const [selectedClient, setSelectedClient] = useState<ClientLite | null>(null)
-  const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState<boolean>(false)
   const [term, setTerm] = useState("")
   const [skip, setSkip] = useState(0)
   const TAKE = 20
@@ -143,13 +147,14 @@ export default function EditVehicle() {
 
   const [errors, setErrors] = useState<{ license_plate?: string; registration_date?: string; vin?: string }>({})
 
+  // Refs for a11y focus
   const plateRef = useRef<HTMLInputElement>(null)
   const regDateRef = useRef<HTMLInputElement>(null)
   const vinRef = useRef<HTMLInputElement>(null)
   const errorSummaryRef = useRef<HTMLDivElement>(null)
   const [submitAttempted, setSubmitAttempted] = useState(false)
 
-  // Populate form & client
+  // Populate form & selected client
   useEffect(() => {
     const v = data?.vehicle
     if (!v) return
@@ -188,7 +193,7 @@ export default function EditVehicle() {
       setForm((f) => ({ ...f, [field]: val }))
     }
 
-  // Validations
+  // Client-side validations
   useEffect(() => {
     const e: typeof errors = {}
     if (form.license_plate && !plateRegex.test(form.license_plate)) {
@@ -233,7 +238,7 @@ export default function EditVehicle() {
     await updateVehicle({
       variables: {
         vehicle_id: id,
-        client_id: selectedClient?.client_id, // 👈 se envía
+        client_id: selectedClient?.client_id,
         make: form.make || undefined,
         model: form.model || undefined,
         year: typeof year === "number" ? year : undefined,
@@ -252,12 +257,24 @@ export default function EditVehicle() {
   }
 
   // Early states
-  if (!validId) return <p className="p-6 text-red-400">Invalid vehicle ID.</p>
+  if (!validId) {
+    return (
+      <div className="p-6 text-white">
+        <div className="rounded-xl border border-red-800 bg-red-900/30 p-4">
+          <p className="text-red-200">Invalid vehicle ID.</p>
+          <Link to="/vehicles" className="underline text-indigo-300 mt-2 inline-block">
+            Back to vehicles
+          </Link>
+        </div>
+      </div>
+    )
+  }
   if (qLoading) return <p className="p-6 text-gray-300">Loading…</p>
   if (qError) return <p className="p-6 text-red-500">Error: {qError.message}</p>
   if (!data?.vehicle) return <p className="p-6 text-gray-300">Vehicle not found.</p>
 
   const hasErrors = Object.keys(errors).length > 0
+
   const ensureOption = (list: readonly string[], value?: string) =>
     value && !list.includes(value) ? [value, ...list] : [...list]
   const fuelOptions = ensureOption(FUEL_OPTIONS, form.fuel_type)
@@ -281,6 +298,7 @@ export default function EditVehicle() {
               type="button"
               className="px-3 py-1 rounded-xl bg-zinc-800 hover:bg-zinc-700"
               onClick={() => setPickerOpen(true)}
+              aria-label="Change client"
             >
               Change
             </button>
@@ -293,6 +311,7 @@ export default function EditVehicle() {
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
+              aria-label="Search clients"
             />
             <div className="mt-2 max-h-56 overflow-auto rounded-xl border border-zinc-800">
               {searching && <div className="p-2 text-sm text-gray-400">Searching...</div>}
@@ -341,27 +360,74 @@ export default function EditVehicle() {
         )}
       </div>
 
-      {/* Form … */}
-      {/* (todo lo demás del formulario igual que antes: make, model, vin, etc.) */}
-
-      <div className="flex gap-3 pt-2">
-        <button
-          type="submit"
-          disabled={!canSubmit || mLoading}
-          className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50"
+      {/* Accessible error summary */}
+      {submitAttempted && hasErrors && (
+        <div
+          ref={errorSummaryRef}
+          className="mb-4 rounded-xl border border-red-700/60 bg-red-900/30 p-3"
+          role="alert"
+          aria-live="assertive"
+          tabIndex={-1}
         >
-          {mLoading ? "Saving…" : "Save changes"}
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700"
-        >
-          Cancel
-        </button>
-      </div>
+          <p className="font-semibold">Please review the following fields:</p>
+          <ul className="list-disc ml-5 text-sm mt-1">
+            {errors.license_plate && (
+              <li>
+                <a
+                  href="#license_plate"
+                  className="underline"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    plateRef.current?.focus()
+                  }}
+                >
+                  License plate: {errors.license_plate}
+                </a>
+              </li>
+            )}
+            {errors.registration_date && (
+              <li>
+                <a
+                  href="#registration_date"
+                  className="underline"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    regDateRef.current?.focus()
+                  }}
+                >
+                  Registration date: {errors.registration_date}
+                </a>
+              </li>
+            )}
+            {errors.vin && (
+              <li>
+                <a
+                  href="#vin"
+                  className="underline"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    vinRef.current?.focus()
+                  }}
+                >
+                  VIN: {errors.vin}
+                </a>
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
 
-      {toast && <Toast type={toast.type} msg={toast.msg} onClose={() => setToast(null)} />}
+      <form onSubmit={handleSubmit} className="space-y-4 max-w-xl" aria-busy={mLoading ? "true" : "false"} noValidate>
+        {/* ... resto del formulario igual que antes (make, model, year, etc.) */}
+      </form>
+
+      {toast && (
+        <Toast
+          type={toast.type}
+          msg={toast.msg}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   )
 }
