@@ -1,42 +1,41 @@
 // src/main.tsx
-
 import React, { type ReactElement } from "react"
 import ReactDOM from "react-dom/client"
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { ApolloProvider } from "@apollo/client"
-import client from "./apollo/client"
-import { AuthProvider } from "./auth/AuthProvider"
-import "./index.css"
+import client from "@/apollo/client"
+import { AuthProvider } from "@/auth/AuthProvider"
+import "@/index.css"
 
-import RoleProtectedRoute from "./components/RoleProtectedRoute"
-import { getCurrentUserRole } from "./utils/token"
+import RoleProtectedRoute from "@/components/RoleProtectedRoute"
+import { getCurrentUserRole } from "@/utils/token"
 
 // Public pages
-import Login from "./pages/Login"
-import Unauthorized from "./pages/Unauthorized"
+import Login from "@/pages/Login"
+import Unauthorized from "@/pages/Unauthorized"
 
 // Dashboards
-import AdminDashboard from "./pages/dashboards/AdminDashboard"
-import FrontdeskDashboard from "./pages/dashboards/FrontdeskDashboard"
-import MechanicDashboard from "./pages/dashboards/MechanicDashboard"
+import AdminDashboard from "@/pages/dashboards/AdminDashboard"
+import FrontdeskDashboard from "@/pages/dashboards/FrontdeskDashboard"
+import MechanicDashboard from "@/pages/dashboards/MechanicDashboard"
 
 // Users
-import Users from "./pages/users/Users"
-import CreateUser from "./pages/users/CreateUser"
-import EditUser from "./pages/users/EditUser"
+import Users from "@/pages/users/Users"
+import CreateUser from "@/pages/users/CreateUser"
+import EditUser from "@/pages/users/EditUser"
 
 // Clients
-import Clients from "./pages/clients/Clients"
-import CreateClient from "./pages/clients/CreateClient"
-import EditClient from "./pages/clients/EditClient"
+import Clients from "@/pages/clients/Clients"
+import CreateClient from "@/pages/clients/CreateClient"
+import EditClient from "@/pages/clients/EditClient"
 
 // Vehicles
-import Vehicles from "./pages/vehicles/Vehicles"
-import CreateVehicle from "./pages/vehicles/CreateVehicle"
-import EditVehicle from "./pages/vehicles/EditVehicle"
+import Vehicles from "@/pages/vehicles/Vehicles"
+import CreateVehicle from "@/pages/vehicles/CreateVehicle"
+import EditVehicle from "@/pages/vehicles/EditVehicle"
 
 // Settings
-import Settings from "./pages/Settings"
+import Settings from "@/pages/Settings"
 
 function RoleBasedDashboard(): ReactElement {
   const role = getCurrentUserRole() ?? ""
