@@ -65,7 +65,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               {/* Users */}
               <Route path="/users" element={<Users />} />
               <Route path="/users/create" element={<CreateUser />} />
-              <Route path="/users/:id/edit" element={<EditUser />} />
+              <Route path="/users/:userId/edit" element={<EditUser />} />
 
               {/* Clients */}
               <Route path="/clients" element={<Clients />} />
