@@ -9,10 +9,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ---------- Enums (Global) ----------
+
 enum ClientType {
   PERSONAL
   COMPANY
 }
+
+// ---------- WorkOrders ----------
+
+enum WorkOrderStatus {
+  OPEN
+  IN_PROGRESS
+  ON_HOLD
+  CLOSED
+  CANCELED
+}
+
+enum WorkOrderPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// ---------- Users ----------
 
 model users {
   user_id       Int       @id @default(autoincrement())
@@ -24,7 +45,12 @@ model users {
   created_at    DateTime  @default(now()) @db.Timestamp(6)
   updated_at    DateTime  @updatedAt @db.Timestamp(6)
   last_logout   DateTime? @db.Timestamp(6)
+
+  // reverse
+  work_orders   work_orders[] @relation("work_orders_assigned_user")
 }
+
+// ---------- Clients / Companies ----------
 
 model clients {
   client_id       Int        @id @default(autoincrement())
@@ -82,6 +108,8 @@ model companies {
   updated_at     DateTime  @updatedAt
 }
 
+// ---------- Vehicles ----------
+
 model vehicles {
   vehicle_id         Int        @id @default(autoincrement())
   client_id          Int
@@ -108,7 +136,14 @@ model vehicles {
   appointments       appointments[]
   pre_work_orders    pre_work_orders[]
   work_orders        work_orders[]
+
+  @@index([client_id])
+  @@index([company_id])
+  @@index([license_plate])
+  @@index([vin])
 }
+
+// ---------- Appointments ----------
 
 model appointments {
   appointment_id Int       @id @default(autoincrement())
@@ -121,7 +156,13 @@ model appointments {
   updated_at     DateTime  @updatedAt
 
   vehicle        vehicles  @relation(fields: [vehicle_id], references: [vehicle_id])
+
+  @@index([vehicle_id])
+  @@index([date])
+  @@index([status])
 }
+
+// ---------- Inspection Templates / Pre Work Orders ----------
 
 model inspection_templates {
   template_id     Int       @id @default(autoincrement())
@@ -148,38 +189,77 @@ model pre_work_orders {
 
   vehicle           vehicles             @relation(fields: [vehicle_id], references: [vehicle_id])
   template          inspection_templates @relation(fields: [template_id], references: [template_id])
+
+  @@index([vehicle_id])
+  @@index([template_id])
 }
+
+// ---------- Work Orders (mejorado) ----------
 
 model work_orders {
-  work_order_id   Int        @id @default(autoincrement())
-  vehicle_id      Int
-  client_id       Int
-  description     String?
-  status          String     @default("open")
-  tasks           Json?
-  start_date      DateTime?
-  end_date        DateTime?
-  total_cost      Float?
+  work_order_id     Int               @id @default(autoincrement())
+  vehicle_id        Int
+  client_id         Int
+  assigned_user_id  Int?              // users.user_id (mecánico/encargado)
 
-  created_at      DateTime   @default(now())
-  updated_at      DateTime   @updatedAt
+  // Título breve para listados
+  title             String            @db.VarChar(160)
+  description       String?
 
-  vehicle         vehicles   @relation(fields: [vehicle_id], references: [vehicle_id])
-  client          clients    @relation(fields: [client_id], references: [client_id])
-  invoice         invoices?
+  // Enums: mayor seguridad de datos
+  status            WorkOrderStatus   @default(OPEN)
+  priority          WorkOrderPriority @default(MEDIUM)
+
+  // Agenda + ejecución (opcionales)
+  scheduled_start   DateTime?
+  scheduled_end     DateTime?
+  start_date        DateTime?
+  end_date          DateTime?
+
+  // Contexto de servicio / costes
+  km_at_service     Int?
+  estimated_cost    Decimal?          @db.Decimal(10, 2)
+  total_cost        Decimal?          @db.Decimal(10, 2)
+
+  // Tareas estructuradas (libre)
+  tasks             Json?
+
+  created_at        DateTime          @default(now())
+  updated_at        DateTime          @updatedAt
+
+  vehicle           vehicles          @relation(fields: [vehicle_id], references: [vehicle_id], onDelete: Restrict)
+  client            clients           @relation(fields: [client_id], references: [client_id], onDelete: Restrict)
+  assigned_user     users?            @relation("work_orders_assigned_user", fields: [assigned_user_id], references: [user_id], onDelete: SetNull)
+
+  // 1–1 con invoice (tu relación existente)
+  invoice           invoices?
+
+  @@index([client_id])
+  @@index([vehicle_id])
+  @@index([status])
+  @@index([priority])
+  @@index([assigned_user_id])
+  @@index([scheduled_start])
+  @@index([end_date])
+  @@map("work_orders")
 }
 
+// ---------- Invoices (consistencia money) ----------
+
 model invoices {
-  invoice_id      Int        @id @default(autoincrement())
-  work_order_id   Int        @unique
-  issue_date      DateTime   @default(now())
+  invoice_id      Int         @id @default(autoincrement())
+  work_order_id   Int         @unique
+  issue_date      DateTime    @default(now())
   due_date        DateTime?
-  total_amount    Float
-  paid            Boolean    @default(false)
+  total_amount    Decimal     @db.Decimal(10, 2) // ← antes era Float
+  paid            Boolean     @default(false)
   payment_method  String?
 
-  created_at      DateTime   @default(now())
-  updated_at      DateTime   @updatedAt
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
 
   work_order      work_orders @relation(fields: [work_order_id], references: [work_order_id])
+
+  @@index([paid])
+  @@index([issue_date])
 }
