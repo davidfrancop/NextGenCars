@@ -1,3 +1,77 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ---- Base global para tema oscuro y contraste ---- */
+@layer base {
+  /* Fuerza la clase 'dark' (combina con index.html) */
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: #09090b; /* Tailwind bg-zinc-950 */
+    color: #f4f4f5;           /* Tailwind text-zinc-100 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Selección de texto visible */
+  ::selection {
+    background-color: rgba(99, 102, 241, 0.4); /* Equivalent to bg-indigo-500/40 */
+  }
+}
+
+/* Componentes utilitarios opcionales (te ayudan a mantener consistencia) */
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 0.75rem; /* px-3 */
+  .btn-primary {
+    background-color: #4f46e5; /* bg-indigo-600 */
+    border-color: transparent;
+  }
+  .btn-primary:hover {
+    background-color: #6366f1; /* hover:bg-indigo-500 */
+  }
+  .btn-ghost {
+    background-color: transparent;
+    border-color: #3f3f46; /* border-zinc-700 */
+  }
+  .btn-ghost:hover {
+    background-color: rgba(24, 24, 27, 0.6); /* hover:bg-zinc-900/60 */
+  }
+  .card {
+    border-radius: 0.75rem; /* rounded-xl */
+    border: 1px solid #27272a; /* border-zinc-800 */
+    background-color: rgba(24, 24, 27, 0.6); /* bg-zinc-900/60 */
+  }
+  .input {
+    width: 100%;
+    padding-left: 0.75rem; /* px-3 */
+    padding-right: 0.75rem;
+    padding-top: 0.5rem;   /* py-2 */
+    padding-bottom: 0.5rem;
+    border-radius: 0.75rem; /* rounded-xl */
+    background-color: #18181b; /* bg-zinc-900 */
+    border: 1px solid #27272a; /* border-zinc-800 */
+    color: #f4f4f5; /* text-zinc-100 */
+  }
+  .input::placeholder {
+    color: #71717a; /* placeholder:text-zinc-500 */
+  }
+    @apply bg-indigo-600 hover:bg-indigo-500 border-transparent;
+  }
+  .btn-ghost {
+    @apply bg-transparent border-zinc-700 hover:bg-zinc-900/60;
+  }
+  .card {
+    @apply rounded-xl border border-zinc-800 bg-zinc-900/60;
+  }
+  .input {
+    @apply w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800
+           text-zinc-100 placeholder:text-zinc-500;
+  }
+}
