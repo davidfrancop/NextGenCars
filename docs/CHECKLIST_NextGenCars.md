@@ -43,9 +43,9 @@
 - [x] QA CRUD vehículos
 
 ### **5C.14 – Revisión y actualización total**
-- [ ] Verificación de todos los CRUD
-- [ ] Test de formularios y datos
-- [ ] Ajustes visuales menores
+- [x] Verificación de todos los CRUD
+- [x] Test de formularios y datos
+- [x] Ajustes visuales menores
 
 ---
 
