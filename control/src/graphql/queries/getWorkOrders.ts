@@ -3,7 +3,7 @@
 import { gql } from "@apollo/client"
 
 export const GET_WORK_ORDERS = gql`
-  query WorkOrders($filter: WorkOrderFilter, $skip: Int, $take: Int) {
+  query GetWorkOrders($filter: WorkOrderFilter, $skip: Int, $take: Int) {
     workOrders(filter: $filter, skip: $skip, take: $take) {
       total
       items {
