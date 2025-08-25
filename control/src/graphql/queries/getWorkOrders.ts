@@ -1,4 +1,5 @@
-// control/src/graphql/queries/workOrders.ts
+// control/src/graphql/queries/getWorkOrders.ts
+
 import { gql } from "@apollo/client"
 
 export const GET_WORK_ORDERS = gql`

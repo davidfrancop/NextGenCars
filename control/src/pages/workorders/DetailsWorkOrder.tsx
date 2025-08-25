@@ -1,3 +1,5 @@
+//control/src/pages/workorders/DetailsWorkOrder.tsx
+
 import { useParams, Link } from "react-router-dom"
 import { useQuery } from "@apollo/client"
 import { GET_WORK_ORDER } from "@/graphql/queries/getWorkOrder"
