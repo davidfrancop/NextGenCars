@@ -1,4 +1,5 @@
 // backend-graphql/src/context.ts
+
 import type { PrismaClient } from "@prisma/client"
 import { db } from "../db"              // 👈 corregido
 import jwt from "jsonwebtoken"
