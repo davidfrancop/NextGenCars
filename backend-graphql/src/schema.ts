@@ -172,6 +172,7 @@ export const schema = createSchema<Context>({
       from: DateTime
       to: DateTime
       search: String
+      q: String            # 👈 añadido para que el frontend pueda mandar filter.q
     }
 
     input WorkOrderCreateInput {
