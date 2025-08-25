@@ -18,7 +18,6 @@ export const GET_WORK_ORDER = gql`
       estimated_cost
       total_cost
       tasks
-
       client {
         client_id
         first_name
