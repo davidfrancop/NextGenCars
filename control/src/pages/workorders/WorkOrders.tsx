@@ -1,256 +1,242 @@
-import { useEffect, useMemo, useRef, useState } from "react"
-import { Link } from "react-router-dom"
-import { useMutation, useQuery } from "@apollo/client"
-import { ClipboardList, Pencil, Eye, Plus } from "lucide-react"
+// control/src/pages/workorders/WorkOrders.tsx
 
+import { useMemo, useState } from "react"
+import { Link, useSearchParams } from "react-router-dom"
+import { useQuery } from "@apollo/client"
 import { GET_WORK_ORDERS } from "@/graphql/queries/getWorkOrders"
-import { DELETE_WORK_ORDER } from "@/graphql/mutations/deleteWorkOrder"
-import RoleGuard from "@/components/RoleGuard"
-import Delete from "@/components/common/Delete"
 
-type Row = {
-  work_order_id: number
-  title?: string | null
-  status: "OPEN" | "IN_PROGRESS" | "ON_HOLD" | "CLOSED" | "CANCELED"
-  client?: {
-    first_name?: string | null
-    last_name?: string | null
-    company_name?: string | null
-  } | null
-  vehicle?: {
-    make: string
-    model: string
-    license_plate: string
-  } | null
+type Client = {
+  client_id: number
+  type?: "PERSONAL" | "COMPANY" | null
+  first_name?: string | null
+  last_name?: string | null
+  company_name?: string | null
 }
 
-const TAKE = 20
+type Vehicle = {
+  vehicle_id: number
+  make?: string | null
+  model?: string | null
+  license_plate?: string | null
+}
+
+type User = {
+  user_id: number
+  username: string
+  role: "admin" | "frontdesk" | "mechanic"
+}
+
+type WorkOrder = {
+  work_order_id: number
+  title?: string | null
+  status?: string | null
+  priority?: string | null
+  created_at?: string | null
+  scheduled_start?: string | null
+  total_cost?: number | null
+  client?: Client | null
+  vehicle?: Vehicle | null
+  assigned_user?: User | null
+}
+
+type WorkOrderFilter = {
+  q?: string | null
+  status?: string | null
+  priority?: string | null
+  clientId?: number | null
+  vehicleId?: number | null
+}
+
+const TAKE = 10
+
+function fullClientName(c?: Client | null) {
+  if (!c) return "—"
+  if (c.company_name && c.company_name.trim()) return c.company_name
+  const fn = c.first_name?.trim() || ""
+  const ln = c.last_name?.trim() || ""
+  return [fn, ln].filter(Boolean).join(" ") || "—"
+}
+
+function vehicleLabel(v?: Vehicle | null) {
+  if (!v) return "—"
+  const mm = [v.make, v.model].filter(Boolean).join(" ")
+  return [mm, v.license_plate].filter(Boolean).join(" • ") || "—"
+}
+
+function euro(n?: number | null) {
+  if (n == null) return "—"
+  return new Intl.NumberFormat(undefined, { style: "currency", currency: "EUR" }).format(n)
+}
+
+function dateShort(iso?: string | null) {
+  if (!iso) return "—"
+  const d = new Date(iso)
+  return isNaN(d.getTime()) ? "—" : d.toLocaleDateString()
+}
 
 export default function WorkOrders() {
-  const [term, setTerm] = useState("")
-  const [skip, setSkip] = useState(0)
-  const [status, setStatus] = useState<string>("") // filtro simple
+  const [params, setParams] = useSearchParams()
+  const initialQ = params.get("q") || ""
+  const initialPage = Math.max(1, parseInt(params.get("page") || "1", 10))
 
-  const vars = useMemo(() => ({
-    skip,
-    take: TAKE,
-    filter: {
-      search: term.trim() ? term.trim() : null,
-      status: status || null,
-    },
-  }), [skip, term, status])
+  const [q, setQ] = useState(initialQ)
+  const [page, setPage] = useState(initialPage)
+
+  const skip = (page - 1) * TAKE
+
+  const filter: WorkOrderFilter = useMemo(
+    () => ({
+      q: q.trim() ? q.trim() : null,
+    }),
+    [q]
+  )
 
   const { data, loading, error, refetch } = useQuery(GET_WORK_ORDERS, {
-    variables: vars,
+    variables: { filter, skip, take: TAKE },
     fetchPolicy: "cache-and-network",
   })
 
-  const [deleteWO] = useMutation(DELETE_WORK_ORDER)
-
-  // debounce búsqueda
-  const deb = useRef<number | null>(null)
-  useEffect(() => {
-    if (deb.current) window.clearTimeout(deb.current)
-    deb.current = window.setTimeout(() => {
-      setSkip(0)
-      refetch(vars)
-    }, 250) as any
-    return () => { if (deb.current) window.clearTimeout(deb.current) }
-  }, [term, status]) // eslint-disable-line react-hooks/exhaustive-deps
-
+  const items: WorkOrder[] = data?.workOrders?.items ?? []
   const total: number = data?.workOrders?.total ?? 0
-  const rows: Row[] = data?.workOrders?.items ?? []
-  const page = Math.floor(skip / TAKE) + 1
-  const pages = Math.max(1, Math.ceil(total / TAKE))
+  const totalPages = Math.max(1, Math.ceil(total / TAKE))
 
-  const nextPage = () => setSkip((s) => Math.min(s + TAKE, Math.max(0, (pages - 1) * TAKE)))
-  const prevPage = () => setSkip((s) => Math.max(0, s - TAKE))
-  const resetPage = () => setSkip(0)
+  const onSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const next = new URLSearchParams(params)
+    if (q.trim()) next.set("q", q.trim())
+    else next.delete("q")
+    next.set("page", "1")
+    setParams(next, { replace: true })
+    setPage(1)
+    refetch({ filter: { q: q.trim() || null }, skip: 0, take: TAKE })
+  }
 
-  const clientName = (r: Row) =>
-    r.client?.company_name ||
-    [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") ||
-    "—"
-
-  const vehicleName = (r: Row) =>
-    r.vehicle ? `${r.vehicle.make} ${r.vehicle.model} (${r.vehicle.license_plate})` : "—"
+  const goPage = (p: number) => {
+    const clamped = Math.min(Math.max(1, p), totalPages)
+    setPage(clamped)
+    const next = new URLSearchParams(params)
+    next.set("page", String(clamped))
+    if (q.trim()) next.set("q", q.trim()); else next.delete("q")
+    setParams(next, { replace: true })
+    refetch({ filter, skip: (clamped - 1) * TAKE, take: TAKE })
+  }
 
   return (
-    <div className="p-6 text-white max-w-6xl mx-auto">
-      {/* header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold flex items-center gap-2">
-          <ClipboardList size={26} />
-          Work Orders
-        </h1>
-
-        {/* botón New solo para admin/frontdesk */}
-        <RoleGuard allowed={["admin", "frontdesk"]}>
-          <Link
-            to="/workorders/create"
-            className="inline-flex items-center gap-1 rounded-md border px-3 py-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950"
-          >
-            <Plus size={16} />
-            New Work Order
-          </Link>
-        </RoleGuard>
-      </div>
-
-      {/* filtros */}
-      <div className="mb-4 flex flex-col sm:flex-row gap-3">
-        <input
-          value={term}
-          onChange={(e) => setTerm(e.target.value)}
-          placeholder="Search (title, description)…"
-          className="w-full sm:max-w-md px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
-          aria-label="Search work orders"
-        />
-        <select
-          value={status}
-          onChange={(e) => { setStatus(e.target.value); resetPage() }}
-          className="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800"
-          aria-label="Filter by status"
+    <div className="p-6">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Work Orders</h1>
+        <Link
+          to="/workorders/create"
+          className="inline-flex items-center gap-1 rounded-md border px-3 py-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950"
         >
-          <option value="">All statuses</option>
-          <option value="OPEN">OPEN</option>
-          <option value="IN_PROGRESS">IN_PROGRESS</option>
-          <option value="ON_HOLD">ON_HOLD</option>
-          <option value="CLOSED">CLOSED</option>
-          <option value="CANCELED">CANCELED</option>
-        </select>
+          New Work Order
+        </Link>
       </div>
 
-      {/* estados de carga */}
-      {loading && <p className="text-gray-300">Loading…</p>}
-      {error && <p className="text-red-500">Error: {error.message}</p>}
+      <form onSubmit={onSearchSubmit} className="mb-4 flex items-center gap-2">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search by number, title, client, vehicle…"
+          className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-900"
+        />
+        <button
+          type="submit"
+          className="rounded-md border px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-800"
+        >
+          Search
+        </button>
+      </form>
 
-      {/* tabla */}
-      {!error && (
-        <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900">
-          <table className="min-w-full">
-            <thead>
-              <tr className="text-left bg-zinc-800/60">
-                <th className="px-4 py-3 text-sm font-medium text-zinc-300">Title</th>
-                <th className="px-4 py-3 text-sm font-medium text-zinc-300">Status</th>
-                <th className="px-4 py-3 text-sm font-medium text-zinc-300">Client</th>
-                <th className="px-4 py-3 text-sm font-medium text-zinc-300">Vehicle</th>
-                <th className="px-4 py-3 text-sm font-medium text-zinc-300 text-right">Actions</th>
+      <div className="overflow-x-auto rounded-md border border-zinc-200 dark:border-zinc-800">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-zinc-100/60 dark:bg-zinc-800/60">
+            <tr className="text-zinc-600 dark:text-zinc-300">
+              <th className="px-3 py-2">#</th>
+              <th className="px-3 py-2">Title</th>
+              <th className="px-3 py-2">Client</th>
+              <th className="px-3 py-2">Vehicle</th>
+              <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2">Priority</th>
+              <th className="px-3 py-2">Created</th>
+              <th className="px-3 py-2">Scheduled</th>
+              <th className="px-3 py-2">Total</th>
+              <th className="px-3 py-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && (
+              <tr>
+                <td className="px-3 py-3" colSpan={10}>Loading…</td>
               </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr
-                  key={r.work_order_id}
-                  className="border-b border-zinc-800 hover:bg-zinc-800/40 transition"
-                >
-                  <td className="px-4 py-2">
+            )}
+            {error && (
+              <tr>
+                <td className="px-3 py-3 text-rose-600" colSpan={10}>
+                  Failed to load work orders: {error.message}
+                </td>
+              </tr>
+            )}
+            {!loading && !error && items.length === 0 && (
+              <tr>
+                <td className="px-3 py-3" colSpan={10}>No results</td>
+              </tr>
+            )}
+
+            {items.map((wo) => (
+              <tr key={wo.work_order_id} className="border-t border-zinc-200 dark:border-zinc-800">
+                <td className="px-3 py-2 font-mono">{wo.work_order_id}</td>
+                <td className="px-3 py-2">{wo.title || "—"}</td>
+                <td className="px-3 py-2">{fullClientName(wo.client)}</td>
+                <td className="px-3 py-2">{vehicleLabel(wo.vehicle)}</td>
+                <td className="px-3 py-2">{wo.status || "—"}</td>
+                <td className="px-3 py-2">{wo.priority || "—"}</td>
+                <td className="px-3 py-2">{dateShort(wo.created_at)}</td>
+                <td className="px-3 py-2">{dateShort(wo.scheduled_start)}</td>
+                <td className="px-3 py-2">{euro(wo.total_cost)}</td>
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-2">
                     <Link
-                      to={`/workorders/${r.work_order_id}`}
-                      className="text-indigo-300 hover:underline"
+                      to={`/workorders/${wo.work_order_id}`}
+                      className="rounded-md border px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-800"
                     >
-                      {r.title ?? "—"}
+                      Details
                     </Link>
-                  </td>
-                  <td className="px-4 py-2">
-                    <StatusPill status={r.status} />
-                  </td>
-                  <td className="px-4 py-2">{clientName(r)}</td>
-                  <td className="px-4 py-2">{vehicleName(r)}</td>
-                  <td className="px-4 py-2 text-right">
-                    <div className="flex items-center gap-3 justify-end">
-                      {/* view */}
-                      <Link
-                        to={`/workorders/${r.work_order_id}`}
-                        className="inline-flex text-blue-300 hover:text-blue-200"
-                        title="View details"
-                        aria-label={`View work order #${r.work_order_id}`}
-                      >
-                        <Eye size={18} />
-                      </Link>
+                    <Link
+                      to={`/workorders/${wo.work_order_id}/edit`}
+                      className="rounded-md border px-2 py-1 text-xs text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    >
+                      Edit
+                    </Link>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-                      {/* edit: sólo admin/frontdesk */}
-                      <RoleGuard allowed={["admin", "frontdesk"]}>
-                        <Link
-                          to={`/workorders/${r.work_order_id}/edit`}
-                          className="inline-flex text-amber-400 hover:text-amber-300"
-                          title="Edit work order"
-                          aria-label={`Edit work order #${r.work_order_id}`}
-                        >
-                          <Pencil size={18} />
-                        </Link>
-                      </RoleGuard>
-
-                      {/* delete: sólo admin/frontdesk */}
-                      <RoleGuard allowed={["admin", "frontdesk"]}>
-                        <Delete
-                          iconOnly
-                          title="Delete work order"
-                          text="This action cannot be undone. Do you want to delete this work order?"
-                          successMessage="Work order deleted"
-                          errorMessage="Failed to delete work order"
-                          onDelete={async () => {
-                            await deleteWO({ variables: { id: r.work_order_id } }) // la mutación usa ($id) → work_order_id: $id
-                            await refetch(vars)
-                          }}
-                          className="inline-flex text-red-500 hover:text-red-400 disabled:opacity-50"
-                        />
-                      </RoleGuard>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-
-              {rows.length === 0 && !loading && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-zinc-400">
-                    No work orders found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      <div className="mt-4 flex items-center justify-between">
+        <div className="text-sm text-zinc-500">
+          Page {page} / {totalPages} • {total} results
         </div>
-      )}
-
-      {/* paginación */}
-      <div className="flex items-center justify-between mt-4">
-        <p className="text-sm text-zinc-400">
-          Page <span className="font-medium text-zinc-200">{page}</span> of{" "}
-          <span className="font-medium text-zinc-200">{pages}</span> · Total{" "}
-          <span className="font-medium text-zinc-200">{total}</span>
-        </p>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <button
-            className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50"
-            onClick={prevPage}
-            disabled={skip === 0}
+            disabled={page <= 1}
+            onClick={() => goPage(page - 1)}
+            className="rounded-md border px-3 py-1 text-sm disabled:opacity-50"
           >
             Prev
           </button>
           <button
-            className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50"
-            onClick={nextPage}
-            disabled={skip + TAKE >= total}
+            disabled={page >= totalPages}
+            onClick={() => goPage(page + 1)}
+            className="rounded-md border px-3 py-1 text-sm disabled:opacity-50"
           >
             Next
           </button>
         </div>
       </div>
     </div>
-  )
-}
-
-function StatusPill({ status }: { status: Row["status"] }) {
-  const map: Record<Row["status"], string> = {
-    OPEN: "bg-emerald-900/40 text-emerald-300 border-emerald-800/60",
-    IN_PROGRESS: "bg-amber-900/40 text-amber-300 border-amber-800/60",
-    ON_HOLD: "bg-zinc-800/60 text-zinc-300 border-zinc-700/60",
-    CLOSED: "bg-blue-900/40 text-blue-300 border-blue-800/60",
-    CANCELED: "bg-rose-900/40 text-rose-300 border-rose-800/60",
-  }
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${map[status]}`}>
-      {status}
-    </span>
   )
 }
