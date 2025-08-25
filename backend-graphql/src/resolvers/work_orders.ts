@@ -219,6 +219,12 @@ export const WorkOrdersResolvers = {
 
   // Field resolvers
   WorkOrder: {
+    // convertir Decimal -> Float para coincidir con el SDL (Float)
+    estimated_cost: (parent: { estimated_cost?: any | null }) =>
+      parent.estimated_cost != null ? Number(parent.estimated_cost) : null,
+    total_cost: (parent: { total_cost?: any | null }) =>
+      parent.total_cost != null ? Number(parent.total_cost) : null,
+
     client: (parent: { client_id: number }, _args: unknown, { db, user }: Context) => {
       canRead(user)
       return db.clients.findUnique({ where: { client_id: parent.client_id } })
