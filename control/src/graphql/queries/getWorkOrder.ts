@@ -1,4 +1,4 @@
-// control/src/graphql/queries/GetWorkOrder.ts
+// control/src/graphql/queries/getWorkOrder.ts
 
 import { gql } from "@apollo/client"
 
