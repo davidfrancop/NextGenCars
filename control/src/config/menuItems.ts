@@ -13,9 +13,7 @@ export type MenuItem = {
   path: string
   roles: Role[]
   icon?: ComponentType<{ size?: number; className?: string }>
-  /** si es false, no aparece en el sidebar pero mantiene RBAC */
   showInSidebar?: boolean
-  /** (NUEVO) matcher opcional para rutas dinámicas */
   match?: RegExp | ((path: string) => boolean)
 }
 
@@ -27,7 +25,9 @@ export const menuItems: MenuItem[] = [
 
   { label: "Clients", path: "/clients", roles: ["admin", "frontdesk"], icon: Users },
   { label: "Vehicles", path: "/vehicles", roles: ["admin", "frontdesk", "mechanic"], icon: CarFront },
-  { label: "Appointments", path: "/appointments", roles: ["admin", "frontdesk"], icon: Calendar },
+
+  // (Opcional) oculto si aún no hay rutas
+  { label: "Appointments", path: "/appointments", roles: ["admin", "frontdesk"], icon: Calendar, showInSidebar: false },
 
   // Work Orders (entrada principal visible)
   { label: "Work Orders", path: "/workorders", roles: ["admin", "frontdesk", "mechanic"], icon: ClipboardList },
@@ -36,26 +36,25 @@ export const menuItems: MenuItem[] = [
   { label: "Work Orders · Create", path: "/workorders/create", roles: ["admin", "frontdesk"], showInSidebar: false },
   {
     label: "Work Orders · Edit",
-    path: "/workorders", // base para prefijo
+    path: "/workorders",
     roles: ["admin", "frontdesk"],
     showInSidebar: false,
-    match: /^\/workorders\/\d+\/edit$/, // solo /workorders/:id/edit
+    match: /^\/workorders\/[^/]+\/edit$/, // admite numérico o UUID
   },
   {
     label: "Work Orders · Details",
     path: "/workorders",
     roles: ["admin", "frontdesk", "mechanic"],
     showInSidebar: false,
-    match: /^\/workorders\/\d+$/, // solo /workorders/:id
+    match: /^\/workorders\/[^/]+$/, // /workorders/:id
   },
 
-  { label: "Inspections", path: "/inspections", roles: ["admin", "frontdesk", "mechanic"], icon: CheckSquare },
-  { label: "Checklist Manager", path: "/inspections/templates", roles: ["admin"], icon: ListChecks },
+  { label: "Inspections", path: "/inspections", roles: ["admin", "frontdesk", "mechanic"], icon: CheckSquare, showInSidebar: false },
+  { label: "Checklist Manager", path: "/inspections/templates", roles: ["admin"], icon: ListChecks, showInSidebar: false },
 
-  { label: "Suppliers", path: "/suppliers", roles: ["admin"], icon: Truck },
-
-  { label: "Reports", path: "/reports", roles: ["admin", "frontdesk"], icon: BarChart },
-  { label: "Estimates", path: "/estimates", roles: ["admin", "frontdesk"], icon: FileSignature },
+  { label: "Suppliers", path: "/suppliers", roles: ["admin"], icon: Truck, showInSidebar: false },
+  { label: "Reports", path: "/reports", roles: ["admin", "frontdesk"], icon: BarChart, showInSidebar: false },
+  { label: "Estimates", path: "/estimates", roles: ["admin", "frontdesk"], icon: FileSignature, showInSidebar: false },
 
   { label: "Settings", path: "/settings", roles: ["admin"], icon: Settings },
 ]
@@ -63,7 +62,6 @@ export const menuItems: MenuItem[] = [
 export const allRoles: Role[] = ["admin", "frontdesk", "mechanic"]
 
 export function rolesForPath(pathname: string): Role[] {
-  // 1) (nuevo) prioriza match específico (regex/func) para rutas dinámicas
   const byMatch = menuItems.find(i =>
     typeof i.match === "function" ? i.match(pathname)
     : i.match instanceof RegExp ? i.match.test(pathname)
@@ -71,11 +69,9 @@ export function rolesForPath(pathname: string): Role[] {
   )
   if (byMatch) return byMatch.roles
 
-  // 2) exacto
   const exact = menuItems.find(i => i.path === pathname)
   if (exact) return exact.roles
 
-  // 3) prefijo más largo
   const match = menuItems
     .filter((i) => pathname.startsWith(i.path))
     .sort((a, b) => b.path.length - a.path.length)[0]

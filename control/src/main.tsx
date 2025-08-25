@@ -1,4 +1,5 @@
 // src/main.tsx
+
 import React, { type ReactElement } from "react"
 import ReactDOM from "react-dom/client"
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
@@ -33,6 +34,12 @@ import EditClient from "@/pages/clients/EditClient"
 import Vehicles from "@/pages/vehicles/Vehicles"
 import CreateVehicle from "@/pages/vehicles/CreateVehicle"
 import EditVehicle from "@/pages/vehicles/EditVehicle"
+
+// Work Orders
+import WorkOrders from "@/pages/workorders/WorkOrders"
+import CreateWorkOrder from "@/pages/workorders/CreateWorkOrder"
+import EditWorkOrder from "@/pages/workorders/EditWorkOrder"
+import WorkOrderDetail from "@/pages/workorders/DetailsWorkOrder"
 
 // Settings
 import Settings from "@/pages/Settings"
@@ -76,6 +83,12 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               <Route path="/vehicles" element={<Vehicles />} />
               <Route path="/vehicles/create" element={<CreateVehicle />} />
               <Route path="/vehicles/:id/edit" element={<EditVehicle />} />
+
+              {/* Work Orders */}
+              <Route path="/workorders" element={<WorkOrders />} />
+              <Route path="/workorders/create" element={<CreateWorkOrder />} />
+              <Route path="/workorders/:id/edit" element={<EditWorkOrder />} />
+              <Route path="/workorders/:id" element={<WorkOrderDetail />} />
 
               {/* Settings */}
               <Route path="/settings" element={<Settings />} />
