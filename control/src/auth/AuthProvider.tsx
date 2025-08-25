@@ -1,87 +1,56 @@
-// control/src/auth/AuthProvider.tsx
-import { createContext, useContext, useEffect, useState } from "react"
-import { getToken, saveToken, removeToken, parseToken, isTokenExpired } from "@/utils/token"
+// control/src/utils/token.ts
 
-type User = {
-  role: string
-  email: string
-  username?: string
-  [key: string]: any
+// Clave única y consistente en localStorage
+const TOKEN_KEY = "token"
+
+export function saveToken(token: string) {
+  localStorage.setItem(TOKEN_KEY, token)
 }
 
-type AuthContextType = {
-  isAuthenticated: boolean
-  user: User | null
-  login: (token: string) => void
-  logout: () => void
-  loading: boolean
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY)
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  const checkAuth = () => {
-    const token = getToken()
-
-    if (!token || isTokenExpired(token)) {
-      removeToken()
-      setIsAuthenticated(false)
-      setUser(null)
-      return
-    }
-
-    const decoded = parseToken(token)
-    if (decoded?.role) {
-      setIsAuthenticated(true)
-      setUser({
-        ...decoded,
-        role: decoded.role || "",
-        email: decoded.email || "",
-      })
-    }
-  }
-
-  useEffect(() => {
-    // 🔹 Chequeo inicial
-    checkAuth()
-    // 🔹 Chequeo periódico
-    const interval = setInterval(checkAuth, 60 * 1000)
-    setLoading(false)
-    return () => clearInterval(interval)
-  }, [])
-
-  const login = (token: string) => {
-    saveToken(token)
-    const decoded = parseToken(token)
-    if (decoded?.role) {
-      setIsAuthenticated(true)
-      setUser({
-        ...decoded,
-        role: decoded.role || "",
-        email: decoded.email || "",
-      })
-    }
-  }
-
-  const logout = () => {
-    removeToken()
-    setIsAuthenticated(false)
-    setUser(null)
-  }
-
-  return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, loading }}>
-      {children}
-    </AuthContext.Provider>
-  )
+export function removeToken() {
+  localStorage.removeItem(TOKEN_KEY)
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) throw new Error("useAuth must be used within AuthProvider")
-  return context
+type JwtPayload = {
+  sub?: number | string
+  email?: string
+  role?: string
+  exp?: number // seconds since epoch
+  [k: string]: any
+}
+
+export function parseToken(token: string | null): JwtPayload | null {
+  if (!token) return null
+  try {
+    const [, payloadB64] = token.split(".")
+    if (!payloadB64) return null
+    // atob compatible con base64url
+    const json = decodeURIComponent(
+      atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/"))
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    )
+    const data = JSON.parse(json)
+    return data as JwtPayload
+  } catch {
+    return null
+  }
+}
+
+export function isTokenExpired(token: string | null): boolean {
+  const payload = parseToken(token)
+  if (!payload?.exp) return false // si no trae exp, lo consideramos válido
+  const nowSec = Math.floor(Date.now() / 1000)
+  return nowSec >= payload.exp
+}
+
+// Utilidad que ya usas en varios lados
+export function getCurrentUserRole(): string | null {
+  const p = parseToken(getToken())
+  return (p?.role ?? null) as string | null
 }
