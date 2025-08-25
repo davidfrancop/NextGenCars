@@ -42,28 +42,47 @@ type Filter = {
   from?: string // ISO
   to?: string   // ISO
   search?: string
+  q?: string
 }
 
 const buildWhere = (f?: Filter): Prisma.work_ordersWhereInput | undefined => {
   if (!f) return undefined
   const where: Prisma.work_ordersWhereInput = {}
+
+  // filtros directos
   if (f.status) where.status = f.status as any
   if (f.client_id) where.client_id = f.client_id
   if (f.vehicle_id) where.vehicle_id = f.vehicle_id
   if (f.assigned_user_id) where.assigned_user_id = f.assigned_user_id
 
   const OR: Prisma.work_ordersWhereInput[] = []
+
+  // rango de fechas (cualquiera de las 3 fechas)
   if (f.from || f.to) {
     const range: Prisma.DateTimeNullableFilter = {}
     if (f.from) range.gte = new Date(f.from)
     if (f.to) range.lte = new Date(f.to)
     OR.push({ scheduled_start: range }, { start_date: range }, { end_date: range })
   }
-  if (f.search?.trim()) {
-    const s = f.search.trim()
+
+  // búsqueda de texto: usar search o q (alias aceptado por el frontend)
+  const text = (f.search ?? f.q)?.trim()
+  if (text) {
+    const s = text
     OR.push({ title: { contains: s, mode: "insensitive" } })
     OR.push({ description: { contains: s, mode: "insensitive" } })
+    OR.push({ vehicles: { license_plate: { contains: s, mode: "insensitive" } } })
+    OR.push({
+      clients: {
+        OR: [
+          { first_name:   { contains: s, mode: "insensitive" } },
+          { last_name:    { contains: s, mode: "insensitive" } },
+          { company_name: { contains: s, mode: "insensitive" } },
+        ],
+      },
+    })
   }
+
   if (OR.length) where.OR = OR
   return where
 }
@@ -97,15 +116,18 @@ export const WorkOrdersResolvers = {
     ) => {
       canRead(user)
       const where = buildWhere(filter)
+      const safeTake = Math.min(Math.max(take ?? 25, 1), 100)
+
       const [items, total] = await Promise.all([
         db.work_orders.findMany({
           where,
           skip,
-          take: Math.min(take ?? 25, 100),
+          take: safeTake,
           orderBy: [{ created_at: "desc" }],
         }),
         db.work_orders.count({ where }),
       ])
+
       return { items, total }
     },
 
