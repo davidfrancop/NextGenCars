@@ -3,7 +3,7 @@
 import { gql } from "@apollo/client"
 
 export const GET_WORK_ORDER = gql`
-  query GetWorkOrder($igetWorkOrder.tsd: Int!) {
+  query GetWorkOrder($id: ID!) {
     workOrder(work_order_id: $id) {
       work_order_id
       title
