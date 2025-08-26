@@ -74,6 +74,47 @@ function dateShort(iso?: string | null) {
   return isNaN(d.getTime()) ? "—" : d.toLocaleDateString()
 }
 
+/** ===== Badges (same style language as Clients Type) ===== */
+function StatusBadge({ value }: { value?: string | null }) {
+  const v = (value || "").toUpperCase()
+  // palette: use *-900/40 bg + *-800 border + *-200 text (dark)
+  const map: Record<string, string> = {
+    OPEN: "bg-emerald-900/40 border-emerald-800 text-emerald-200",
+    IN_PROGRESS: "bg-indigo-900/40 border-indigo-800 text-indigo-200",
+    ON_HOLD: "bg-amber-900/40 border-amber-800 text-amber-200",
+    CLOSED: "bg-zinc-800/60 border-zinc-700 text-zinc-200",
+    CANCELED: "bg-rose-900/40 border-rose-800 text-rose-200",
+  }
+  const cls = map[v] || "bg-zinc-800/60 border-zinc-700 text-zinc-200"
+  return (
+    <span
+      className={`text-xs px-2 py-0.5 rounded-full border ${cls}`}
+      aria-label={`Status ${v || "unknown"}`}
+    >
+      {v || "—"}
+    </span>
+  )
+}
+
+function PriorityBadge({ value }: { value?: string | null }) {
+  const v = (value || "").toUpperCase()
+  const map: Record<string, string> = {
+    LOW: "bg-zinc-800/60 border-zinc-700 text-zinc-200",
+    MEDIUM: "bg-sky-900/40 border-sky-800 text-sky-200",
+    HIGH: "bg-orange-900/40 border-orange-800 text-orange-200",
+    URGENT: "bg-red-900/40 border-red-800 text-red-200",
+  }
+  const cls = map[v] || "bg-zinc-800/60 border-zinc-700 text-zinc-200"
+  return (
+    <span
+      className={`text-xs px-2 py-0.5 rounded-full border ${cls}`}
+      aria-label={`Priority ${v || "unknown"}`}
+    >
+      {v || "—"}
+    </span>
+  )
+}
+
 export default function WorkOrders() {
   const [params, setParams] = useSearchParams()
   const initialQ = params.get("q") || ""
@@ -139,6 +180,7 @@ export default function WorkOrders() {
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search by number, title, client, vehicle…"
           className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-900"
+          aria-label="Search work orders"
         />
         <button
           type="submit"
@@ -189,8 +231,12 @@ export default function WorkOrders() {
                 <td className="px-3 py-2">{wo.title || "—"}</td>
                 <td className="px-3 py-2">{fullClientName(wo.client)}</td>
                 <td className="px-3 py-2">{vehicleLabel(wo.vehicle)}</td>
-                <td className="px-3 py-2">{wo.status || "—"}</td>
-                <td className="px-3 py-2">{wo.priority || "—"}</td>
+                <td className="px-3 py-2">
+                  <StatusBadge value={wo.status} />
+                </td>
+                <td className="px-3 py-2">
+                  <PriorityBadge value={wo.priority} />
+                </td>
                 <td className="px-3 py-2">{dateShort(wo.created_at)}</td>
                 <td className="px-3 py-2">{dateShort(wo.scheduled_start)}</td>
                 <td className="px-3 py-2">{euro(wo.total_cost)}</td>
@@ -200,14 +246,9 @@ export default function WorkOrders() {
                       to={`/workorders/${wo.work_order_id}`}
                       className="rounded-md border px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-800"
                     >
-                      Details
+                      Open Order
                     </Link>
-                    <Link
-                      to={`/workorders/${wo.work_order_id}/edit`}
-                      className="rounded-md border px-2 py-1 text-xs text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                    >
-                      Edit
-                    </Link>
+                    
                   </div>
                 </td>
               </tr>

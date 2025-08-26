@@ -3,8 +3,8 @@
 import { gql } from "@apollo/client"
 
 export const GET_WORK_ORDER = gql`
-  query GetWorkOrder($id: ID!) {
-    workOrder(work_order_id: $id) {
+  query GetWorkOrder($work_order_id: Int!) {
+    workOrder(work_order_id: $work_order_id) {
       work_order_id
       title
       description
@@ -18,11 +18,14 @@ export const GET_WORK_ORDER = gql`
       estimated_cost
       total_cost
       tasks
+      created_at
+      updated_at
       client {
         client_id
+        type
+        company_name
         first_name
         last_name
-        company_name
         email
       }
       vehicle {
@@ -36,8 +39,6 @@ export const GET_WORK_ORDER = gql`
         username
         role
       }
-      created_at
-      updated_at
     }
   }
 `

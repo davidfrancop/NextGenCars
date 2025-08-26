@@ -3,14 +3,17 @@
 import { ApolloClient, InMemoryCache, from, HttpLink } from "@apollo/client"
 import { onError } from "@apollo/client/link/error"
 import { setContext } from "@apollo/client/link/context"
-import { getToken } from "@/utils/token"   // 👈 usamos el helper centralizado
+import { getToken } from "@/utils/token"   // ✅ usa TOKEN_KEY = "nextgencars_token"
 
 const httpLink = new HttpLink({
   uri: import.meta.env.VITE_API_URL, // ej: "http://localhost:4000/graphql"
 })
 
 const authLink = setContext((_, { headers }) => {
-  const token = getToken() // usa TOKEN_KEY = "nextgencars_token"
+  const token = getToken()
+  // 👇 LOG para verificar qué token se está leyendo
+  console.log("[Apollo authLink] token:", token)
+
   return {
     headers: {
       ...headers,

@@ -1,7 +1,7 @@
 // backend-graphql/src/context.ts
 
 import type { PrismaClient } from "@prisma/client"
-import { db } from "../db"              // 👈 corregido
+import { db } from "../db"
 import jwt from "jsonwebtoken"
 
 export type Role = "admin" | "frontdesk" | "mechanic"
@@ -51,6 +51,10 @@ export function createContext({ request }: { request: Request }): Context {
       // token inválido/expirado → user indefinido
     }
   }
+
+  // 👇 LOG: aquí vemos qué llega realmente
+  console.log("[Context] Authorization header:", authHeader)
+  console.log("[Context] user:", user)
 
   return { db, user }
 }
