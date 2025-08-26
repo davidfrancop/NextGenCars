@@ -1,6 +1,6 @@
 // control/src/pages/users/Users.tsx
 
-import { useQuery } from "@apollo/client"
+import { useQuery, useMutation } from "@apollo/client"
 import { Link } from "react-router-dom"
 import { GET_USERS } from "@/graphql/queries/getUsers"
 import { DELETE_USER } from "@/graphql/mutations/deleteUser"
@@ -34,6 +34,7 @@ function RoleBadge({ role }: { role: string }) {
 
 export default function Users() {
   const { data, loading, error, refetch } = useQuery(GET_USERS)
+  const [deleteUser] = useMutation(DELETE_USER)
 
   if (loading) return <p>Loading...</p>
   if (error) return <p>Error: {error.message}</p>
@@ -107,7 +108,7 @@ export default function Users() {
                         successMessage="User deleted"
                         errorMessage="Failed to delete user"
                         onDelete={async () => {
-                          await DELETE_USER({ variables: { userId: u.user_id } })
+                          await deleteUser({ variables: { userId: u.user_id } })
                           await refetch()
                         }}
                         className="inline-flex text-red-500 hover:text-red-400 disabled:opacity-50"
