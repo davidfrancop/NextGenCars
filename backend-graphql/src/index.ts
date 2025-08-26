@@ -6,6 +6,7 @@ import { createYoga } from "graphql-yoga"
 import { schema } from "./schema"
 import { createContext, type Context } from "./context"
 import os from "node:os"
+import { logger } from "./logger"
 
 /** Obtiene la IP de la red local (útil para testear en móviles de la misma LAN) */
 function getLanIP() {
@@ -67,12 +68,12 @@ const server = createServer((req, res) => {
 })
 
 server.on("error", (err) => {
-  console.error("❌ HTTP server error:", err)
+  logger.error("❌ HTTP server error:", err)
 })
 
 server.listen(PORT, HOST, () => {
-  console.log("🚀 GraphQL server ready at:")
-  console.log(`   Local:   http://127.0.0.1:${PORT}/graphql`)
-  console.log(`   LAN:     http://${PUBLIC_HOST}:${PORT}/graphql`)
-  console.log(`   Health:  http://127.0.0.1:${PORT}/healthz  |  /readyz`)
+  logger.info("🚀 GraphQL server ready at:")
+  logger.info(`   Local:   http://127.0.0.1:${PORT}/graphql`)
+  logger.info(`   LAN:     http://${PUBLIC_HOST}:${PORT}/graphql`)
+  logger.info(`   Health:  http://127.0.0.1:${PORT}/healthz  |  /readyz`)
 })

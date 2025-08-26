@@ -2,6 +2,7 @@
 
 import type { Context } from "../context"
 import { Prisma } from "@prisma/client"
+import { logger } from "../logger"
 
 // -------- RBAC: types + guards (tolerantes con user.role: string) --------
 export const ROLES = ["admin", "frontdesk", "mechanic"] as const
@@ -106,7 +107,7 @@ export const WorkOrdersResolvers = {
   Query: {
     workOrder: async (_: unknown, { work_order_id }: { work_order_id: number }, { db, user }: Context) => {
       // LOG: confirma user en peticiones de detalle
-      console.log("[workOrder resolver] user:", user, "work_order_id:", work_order_id)
+      logger.debug("[workOrder resolver] user:", user, "work_order_id:", work_order_id)
       canRead(user)
       return db.work_orders.findUnique({ where: { work_order_id } })
     },
@@ -117,14 +118,14 @@ export const WorkOrdersResolvers = {
       { db, user }: Context
     ) => {
       // LOG: confirma user y variables que llegan desde el cliente
-      console.log("[workOrders resolver] user:", user)
-      console.log("[workOrders resolver] args (raw):", { filter, skip, take })
+      logger.debug("[workOrders resolver] user:", user)
+      logger.debug("[workOrders resolver] args (raw):", { filter, skip, take })
 
       canRead(user)
       const where = buildWhere(filter)
 
       // LOG: cómo queda el where que va a Prisma
-      console.log("[workOrders resolver] where:", JSON.stringify(where))
+      logger.debug("[workOrders resolver] where:", JSON.stringify(where))
 
       const safeTake = Math.min(Math.max(take ?? 25, 1), 100)
 
@@ -139,14 +140,14 @@ export const WorkOrdersResolvers = {
       ])
 
       // LOG: resumen de resultados
-      console.log("[workOrders resolver] result:", { total, itemsLen: items.length })
+      logger.debug("[workOrders resolver] result:", { total, itemsLen: items.length })
 
       return { items, total }
     },
 
     // útil para dashboard
     workOrdersRevenue: async (_: unknown, { from, to }: { from?: string; to?: string }, { db, user }: Context) => {
-      console.log("[workOrdersRevenue resolver] user:", user, { from, to })
+      logger.debug("[workOrdersRevenue resolver] user:", user, { from, to })
       canRead(user)
       const where: Prisma.work_ordersWhereInput = { status: "CLOSED" as any }
       if (from || to) {
@@ -163,7 +164,7 @@ export const WorkOrdersResolvers = {
 
   Mutation: {
     createWorkOrder: async (_: unknown, { input }: { input: any }, { db, user }: Context) => {
-      console.log("[createWorkOrder] user:", user)
+      logger.debug("[createWorkOrder] user:", user)
       canMutate(user)
       await assertVehicleBelongsToClient(db, input.client_id, input.vehicle_id)
 
@@ -189,7 +190,7 @@ export const WorkOrdersResolvers = {
     },
 
     updateWorkOrder: async (_: unknown, { work_order_id, input }: { work_order_id: number; input: any }, { db, user }: Context) => {
-      console.log("[updateWorkOrder] user:", user, "work_order_id:", work_order_id)
+      logger.debug("[updateWorkOrder] user:", user, "work_order_id:", work_order_id)
       canMutate(user)
       const existing = await db.work_orders.findUnique({ where: { work_order_id } })
       if (!existing) throw new Error("Work order not found")
@@ -226,7 +227,7 @@ export const WorkOrdersResolvers = {
     },
 
     deleteWorkOrder: async (_: unknown, { work_order_id }: { work_order_id: number }, { db, user }: Context) => {
-      console.log("[deleteWorkOrder] user:", user, "work_order_id:", work_order_id)
+      logger.debug("[deleteWorkOrder] user:", user, "work_order_id:", work_order_id)
       canMutate(user)
       await db.work_orders.delete({ where: { work_order_id } })
       return true
@@ -242,17 +243,17 @@ export const WorkOrdersResolvers = {
       parent.total_cost != null ? Number(parent.total_cost) : null,
 
     client: (parent: { client_id: number }, _args: unknown, { db, user }: Context) => {
-      console.log("[WorkOrder.client] user:", user, "client_id:", parent.client_id)
+      logger.debug("[WorkOrder.client] user:", user, "client_id:", parent.client_id)
       canRead(user)
       return db.clients.findUnique({ where: { client_id: parent.client_id } })
     },
     vehicle: (parent: { vehicle_id: number }, _args: unknown, { db, user }: Context) => {
-      console.log("[WorkOrder.vehicle] user:", user, "vehicle_id:", parent.vehicle_id)
+      logger.debug("[WorkOrder.vehicle] user:", user, "vehicle_id:", parent.vehicle_id)
       canRead(user)
       return db.vehicles.findUnique({ where: { vehicle_id: parent.vehicle_id } })
     },
     assigned_user: (parent: { assigned_user_id?: number | null }, _args: unknown, { db, user }: Context) => {
-      console.log("[WorkOrder.assigned_user] user:", user, "assigned_user_id:", parent.assigned_user_id)
+      logger.debug("[WorkOrder.assigned_user] user:", user, "assigned_user_id:", parent.assigned_user_id)
       canRead(user)
       return parent.assigned_user_id
         ? db.users.findUnique({ where: { user_id: parent.assigned_user_id } })
