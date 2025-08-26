@@ -5,6 +5,15 @@ import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { GraphQLError } from "graphql"
 
+const USER_SELECT = {
+  user_id: true,
+  username: true,
+  email: true,
+  role: true,
+  created_at: true,
+  updated_at: true,
+}
+
 function signToken(user: { user_id: number; email: string; role: string }) {
   const secret = process.env.JWT_SECRET
   if (!secret) throw new Error("JWT_SECRET is not set")
@@ -27,14 +36,7 @@ export const userResolvers = {
     users: async (_: unknown, __: unknown, { db }: Context) => {
       const rows = await db.users.findMany({
         orderBy: { created_at: "desc" },
-        select: {
-          user_id: true,
-          username: true,
-          email: true,
-          role: true,
-          created_at: true,
-          updated_at: true,
-        },
+        select: USER_SELECT,
       })
       return rows.map(withIsoDates)
     },
@@ -42,14 +44,7 @@ export const userResolvers = {
     user: async (_: unknown, { userId }: { userId: number }, { db }: Context) => {
       const found = await db.users.findUnique({
         where: { user_id: userId },
-        select: {
-          user_id: true,
-          username: true,
-          email: true,
-          role: true,
-          created_at: true,
-          updated_at: true,
-        },
+        select: USER_SELECT,
       })
       if (!found) {
         throw new GraphQLError("Usuario no encontrado", { extensions: { code: "NOT_FOUND" } })
@@ -77,14 +72,7 @@ export const userResolvers = {
           password_hash,
           created_at: new Date(),
         },
-        select: {
-          user_id: true,
-          username: true,
-          email: true,
-          role: true,
-          created_at: true,
-          updated_at: true,
-        },
+        select: USER_SELECT,
       })
       return withIsoDates(created)
     },
@@ -113,14 +101,7 @@ export const userResolvers = {
       const updated = await db.users.update({
         where: { user_id: userId },
         data,
-        select: {
-          user_id: true,
-          username: true,
-          email: true,
-          role: true,
-          created_at: true,
-          updated_at: true,
-        },
+        select: USER_SELECT,
       })
       return withIsoDates(updated)
     },
@@ -155,14 +136,7 @@ export const userResolvers = {
 
       const deleted = await db.users.delete({
         where: { user_id: userId },
-        select: {
-          user_id: true,
-          username: true,
-          email: true,
-          role: true,
-          created_at: true,
-          updated_at: true,
-        },
+        select: USER_SELECT,
       })
       return withIsoDates(deleted)
     },
