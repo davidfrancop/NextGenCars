@@ -24,11 +24,15 @@ const FALLBACK_PUBLIC = getLanIP()
 const PUBLIC_HOST = process.env.PUBLIC_HOST || FALLBACK_PUBLIC
 
 /** Permitir orígenes declarados por ENV o localhost/LAN por defecto */
+const corsOriginsEnv =
+  process.env.CORS_ORIGINS?.split(",").map((s) => s.trim()).filter(Boolean)
 const corsOrigins =
-  process.env.CORS_ORIGINS?.split(",").map((s) => s.trim()).filter(Boolean) ?? [
-    `http://localhost:5173`,
-    `http://${PUBLIC_HOST}:5173`,
-  ]
+  corsOriginsEnv && corsOriginsEnv.length > 0
+    ? corsOriginsEnv
+    : [
+        `http://localhost:5173`,
+        `http://${PUBLIC_HOST}:5173`,
+      ]
 
 /** Instancia Yoga (GraphQL) */
 const yoga = createYoga<Context>({
