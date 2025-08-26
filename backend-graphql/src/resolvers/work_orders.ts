@@ -72,9 +72,9 @@ const buildWhere = (f?: Filter): Prisma.work_ordersWhereInput | undefined => {
     const s = text
     OR.push({ title: { contains: s, mode: "insensitive" } })
     OR.push({ description: { contains: s, mode: "insensitive" } })
-    OR.push({ vehicles: { license_plate: { contains: s, mode: "insensitive" } } })
+    OR.push({ vehicle: { license_plate: { contains: s, mode: "insensitive" } } })
     OR.push({
-      clients: {
+      client: {
         OR: [
           { first_name:   { contains: s, mode: "insensitive" } },
           { last_name:    { contains: s, mode: "insensitive" } },
