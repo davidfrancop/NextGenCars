@@ -1,6 +1,7 @@
 // backend-graphql/src/resolvers/vehicles.ts
 
 import type { Context } from "../context"
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library"
 
 /* =========================
    Validation utilities
@@ -153,12 +154,15 @@ export const vehicleResolvers = {
             last_service_date: toDateOrUndefined(args.last_service_date),
           },
         })
-      } catch (err: any) {
-        if (err?.code === "P2002") {
-          const target = (err.meta?.target as string[])?.join(", ") || "unique field"
-          if (target.includes("vin")) throw new Error("VIN already exists.")
-          if (target.includes("license_plate")) throw new Error("License plate already exists.")
-          throw new Error(`Uniqueness conflict on ${target}.`)
+      } catch (err: unknown) {
+        if (err instanceof PrismaClientKnownRequestError) {
+          if (err.code === "P2002") {
+            const target = (err.meta?.target as string[])?.join(", ") || "unique field"
+            if (target.includes("vin")) throw new Error("VIN already exists.")
+            if (target.includes("license_plate"))
+              throw new Error("License plate already exists.")
+            throw new Error(`Uniqueness conflict on ${target}.`)
+          }
         }
         throw err
       }
@@ -276,12 +280,15 @@ export const vehicleResolvers = {
           include: { client: true },
         })
         return updated
-      } catch (err: any) {
-        if (err?.code === "P2002") {
-          const target = (err.meta?.target as string[])?.join(", ") || "unique field"
-          if (target.includes("vin")) throw new Error("VIN already exists.")
-          if (target.includes("license_plate")) throw new Error("License plate already exists.")
-          throw new Error(`Uniqueness conflict on ${target}.`)
+      } catch (err: unknown) {
+        if (err instanceof PrismaClientKnownRequestError) {
+          if (err.code === "P2002") {
+            const target = (err.meta?.target as string[])?.join(", ") || "unique field"
+            if (target.includes("vin")) throw new Error("VIN already exists.")
+            if (target.includes("license_plate"))
+              throw new Error("License plate already exists.")
+            throw new Error(`Uniqueness conflict on ${target}.`)
+          }
         }
         throw err
       }

@@ -35,8 +35,11 @@ export default function Delete({
       setLoading(true)
       await onDelete()
       setToast({ type: "success", msg: successMessage })
-    } catch (e: any) {
-      setToast({ type: "error", msg: e?.message || errorMessage })
+    } catch (e: unknown) {
+      setToast({
+        type: "error",
+        msg: e instanceof Error ? e.message : errorMessage,
+      })
     } finally {
       setLoading(false)
       setOpen(false)
