@@ -1,3 +1,5 @@
+//control/src/pages/workorders/CreateWorkOrder.tsx
+
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { useLazyQuery, useMutation, useQuery, gql } from "@apollo/client"
@@ -63,7 +65,7 @@ const GET_CLIENT_VEHICLES_LOCAL = gql`
   }
 `
 
-/** ───────────────────── UI helpers (same look & feel) ───────────────────── **/
+/** ───────────────────── UI helpers (mismo look & feel) ───────────────────── **/
 function Badge({
   children,
   tone = "default",
@@ -129,7 +131,7 @@ function vehicleLabel(v: VehicleLite) {
 const STATUS_OPTIONS: Status[] = ["OPEN", "IN_PROGRESS", "ON_HOLD", "CLOSED", "CANCELED"]
 const PRIORITY_OPTIONS: Priority[] = ["LOW", "MEDIUM", "HIGH", "URGENT"]
 
-// Unified Task type
+// Task shape que guardamos en backend y que Details entiende
 type TaskItem = { id: string; label: string; done: boolean; notes?: string }
 
 export default function CreateWorkOrder() {
@@ -162,15 +164,13 @@ export default function CreateWorkOrder() {
   const [estimatedCost, setEstimatedCost] = useState<string>("")
   const [totalCost, setTotalCost] = useState<string>("")
 
-  // tasks (checklist → unified JSON)
+  // tasks (checklist) — MISMO SHAPE QUE DETAILS
   const [tasks, setTasks] = useState<TaskItem[]>([])
-
   const addTask = () =>
     setTasks((t) => [...t, { id: `t-${Date.now()}`, label: "", done: false }])
-  const updateTask = (idx: number, patch: Partial<TaskItem>) =>
-    setTasks((t) => t.map((it, i) => (i === idx ? { ...it, ...patch } : it)))
-  const removeTask = (idx: number) =>
-    setTasks((t) => t.filter((_, i) => i !== idx))
+  const updateTask = (id: string, patch: Partial<TaskItem>) =>
+    setTasks((t) => t.map((it) => (it.id === id ? { ...it, ...patch } : it)))
+  const removeTask = (id: string) => setTasks((t) => t.filter((it) => it.id !== id))
 
   // mutation
   const [createWorkOrder, { loading: creating, error: createErr }] = useMutation(CREATE_WORK_ORDER, {
@@ -248,6 +248,7 @@ export default function CreateWorkOrder() {
     if (!vehicleId) return
     if (!title.trim()) return
 
+    // limpiar tasks
     const cleanedTasks = tasks
       .map((t) => ({
         id: t.id,
@@ -473,7 +474,7 @@ export default function CreateWorkOrder() {
             </div>
           </Section>
 
-          {/* Client (read-only preview) */}
+          {/* Client (preview) */}
           <Section title="Client (preview)">
             <div className="space-y-2 text-sm text-zinc-100">
               <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
@@ -491,7 +492,7 @@ export default function CreateWorkOrder() {
             </div>
           </Section>
 
-          {/* Vehicle (read-only preview) */}
+          {/* Vehicle (preview) */}
           <Section title="Vehicle (preview)">
             <div className="space-y-2 text-sm text-zinc-100">
               <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
@@ -586,36 +587,45 @@ export default function CreateWorkOrder() {
           </Section>
         </div>
 
-        {/* Tasks */}
+        {/* Tasks (checklist) */}
         <Section title="Tasks (checklist)">
           <div className="space-y-2">
-            {tasks.length === 0 && (
-              <div className="text-sm text-zinc-400">No tasks yet.</div>
-            )}
-            {tasks.map((t, i) => (
-              <div key={t.id} className="flex items-center gap-2">
+            {tasks.length === 0 && <div className="text-sm text-zinc-400">No tasks yet.</div>}
+
+            {tasks.map((t) => (
+              <div key={t.id} className="flex items-start gap-2">
                 <input
                   type="checkbox"
                   checked={t.done}
-                  onChange={(e) => updateTask(i, { done: e.target.checked })}
-                  aria-label={`Task ${i + 1} done`}
+                  onChange={(e) => updateTask(t.id, { done: e.target.checked })}
+                  aria-label="Done"
+                  className="mt-2 h-4 w-4"
                 />
-                <input
-                  value={t.label}
-                  onChange={(e) => updateTask(i, { label: e.target.value })}
-                  placeholder={`Task #${i + 1}`}
-                  className="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
-                />
+                <div className="w-full">
+                  <input
+                    value={t.label}
+                    onChange={(e) => updateTask(t.id, { label: e.target.value })}
+                    placeholder="Task title…"
+                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+                  />
+                  <textarea
+                    value={t.notes ?? ""}
+                    onChange={(e) => updateTask(t.id, { notes: e.target.value })}
+                    placeholder="Notes (optional)…"
+                    className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+                    rows={2}
+                  />
+                </div>
                 <button
                   type="button"
-                  onClick={() => removeTask(i)}
-                  className="rounded-xl border border-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-800"
-                  aria-label={`Remove task ${i + 1}`}
+                  onClick={() => removeTask(t.id)}
+                  className="rounded-xl border border-rose-800/50 px-2 py-1 text-xs text-rose-300 hover:bg-rose-900/30"
                 >
                   Remove
                 </button>
               </div>
             ))}
+
             <button
               type="button"
               onClick={addTask}
