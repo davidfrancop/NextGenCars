@@ -1,5 +1,4 @@
 // control/src/pages/workorders/DetailsWorkOrder.tsx
-// control/src/pages/workorders/DetailsWorkOrder.tsx
 
 import { useNavigate, useParams } from "react-router-dom"
 import { useQuery, useMutation } from "@apollo/client"
@@ -28,7 +27,11 @@ function Badge({
     red: "bg-rose-900/30 border border-rose-800 text-rose-300",
     blue: "bg-blue-900/30 border border-blue-800 text-blue-300",
   }
-  return <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${map[tone]}`}>{children}</span>
+  return (
+    <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${map[tone]}`}>
+      {children}
+    </span>
+  )
 }
 
 function Section({
@@ -56,11 +59,7 @@ function fmtDateToLocalInput(iso?: string | null) {
   const d = new Date(iso)
   if (isNaN(d.getTime())) return ""
   const pad = (n: number) => String(n).padStart(2, "0")
-  const yyyy = d.getFullYear()
-  const mm = pad(d.getMonth() + 1)
-  const dd = pad(d.getDate())
-  const hh = pad(d.getHours())
-  const mi = pad(d.getMinutes())
+  const yyyy = d.getFullYear(), mm = pad(d.getMonth() + 1), dd = pad(d.getDate()), hh = pad(d.getHours()), mi = pad(d.getMinutes())
   return `${yyyy}-${mm}-${dd}T${hh}:${mi}`
 }
 function parseDateLocalToISO(v: string): string | null {
@@ -101,14 +100,13 @@ export default function DetailsWorkOrder() {
   const wid = Number(id)
 
   const { data, loading, error, refetch } = useQuery(GET_WORK_ORDER, {
-    variables: { work_order_id: wid }, // ✅ tu schema usa work_order_id: Int!
+    variables: { work_order_id: wid }, // tu schema usa work_order_id: Int!
     skip: !Number.isFinite(wid),
     fetchPolicy: "cache-and-network",
   })
 
   const [updateWorkOrder, { loading: saving }] = useMutation(UPDATE_WORK_ORDER, {
-    refetchQueries: [{ query: GET_WORK_ORDER, variables: { work_order_id: wid } }],
-    awaitRefetchQueries: true,
+    onCompleted: () => refetch(),
   })
 
   const w = data?.workOrder
@@ -127,30 +125,13 @@ export default function DetailsWorkOrder() {
   const [startDate, setStartDate] = useState<string>("")
   const [endDate, setEndDate] = useState<string>("")
 
-  // ---- Tasks: checklist (lee varios formatos, guarda estándar) ----
+  // Tasks checklist
   const [tasks, setTasks] = useState<TaskItem[]>([])
   const [newTask, setNewTask] = useState<string>("")
   const [savedOk, setSavedOk] = useState<boolean>(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  // Normaliza tasks del backend a [{id,label,done,notes}]
-  function normalizeTasks(raw: any): TaskItem[] {
-    const arr = Array.isArray(raw) ? raw : []
-    return arr
-      .map((t: any, i: number) => {
-        const label =
-          typeof t === "string"
-            ? t
-            : (t?.label ?? t?.name ?? t?.text ?? "") // 👈 soporte para {text,done} de Create
-        const done = typeof t === "object" ? Boolean(t?.done) : false
-        const notes = typeof t === "object" ? (t?.notes ?? "") : ""
-        const id = String(t?.id ?? `t-${i}-${Math.random().toString(36).slice(2, 7)}`)
-        return { id, label: String(label).trim(), done, notes }
-      })
-      .filter((t: TaskItem) => t.label.length > 0)
-  }
-
-  // Init desde servidor
+  // Init from server
   useEffect(() => {
     if (!w) return
     setStatus(w.status ?? "")
@@ -166,7 +147,22 @@ export default function DetailsWorkOrder() {
     setStartDate(fmtDateToLocalInput(w.start_date))
     setEndDate(fmtDateToLocalInput(w.end_date))
 
-    setTasks(normalizeTasks(w.tasks))
+    // Normalizar tasks a [{id,label,done,notes}]
+    const raw = Array.isArray(w.tasks) ? (w.tasks as any[]) : []
+    const normalized: TaskItem[] = raw
+      .map((t, i) => {
+        const label = typeof t === "string" ? t : (t?.label ?? t?.name ?? "")
+        const done = typeof t === "object" ? Boolean(t?.done) : false
+        const notes = typeof t === "object" ? (t?.notes ?? "") : ""
+        return {
+          id: String(t?.id ?? `t-${i}-${Math.random().toString(36).slice(2, 7)}`),
+          label: String(label || "").trim(),
+          done,
+          notes,
+        }
+      })
+      .filter((t) => t.label.length > 0)
+    setTasks(normalized)
     setSavedOk(false)
     setFormError(null)
   }, [w])
@@ -174,7 +170,7 @@ export default function DetailsWorkOrder() {
   const statusBadge = useMemo(() => <Badge tone={toneForStatus(status)}>{status || "—"}</Badge>, [status])
   const priorityBadge = useMemo(() => <Badge tone={toneForPriority(priority)}>{priority || "—"}</Badge>, [priority])
 
-  // ---- Tasks handlers ----
+  // Tasks handlers
   const addTask = () => {
     const lbl = newTask.trim()
     if (!lbl) return
@@ -188,12 +184,12 @@ export default function DetailsWorkOrder() {
     setTasks((old) => old.map((t) => (t.id === id ? { ...t, notes } : t)))
   const removeTask = (id: string) => setTasks((old) => old.filter((t) => t.id !== id))
 
-  // ---- Save ----
+  // Save
   const onSave = async () => {
     setSavedOk(false)
     setFormError(null)
 
-    // Validaciones simples
+    // Validate numbers
     const kmN = kmAtService.trim() === "" ? null : Number(kmAtService)
     if (kmN != null && (!Number.isInteger(kmN) || kmN < 0)) {
       setFormError("KM at service must be a non-negative integer")
@@ -206,7 +202,7 @@ export default function DetailsWorkOrder() {
       return
     }
 
-    // PAYLOAD estándar para tasks
+    // Build tasks payload
     const tasksPayload = tasks.map((t) => ({
       id: t.id,
       label: t.label.trim(),
@@ -226,7 +222,7 @@ export default function DetailsWorkOrder() {
       scheduled_end: parseDateLocalToISO(scheduledEnd),
       start_date: parseDateLocalToISO(startDate),
       end_date: parseDateLocalToISO(endDate),
-      tasks: tasksPayload, // 👈 siempre JSON estandarizado
+      tasks: tasksPayload,
     }
 
     await updateWorkOrder({
@@ -252,6 +248,8 @@ export default function DetailsWorkOrder() {
       },
     })
     setSavedOk(true)
+    // tras guardar, pedimos fresquito por si el backend aplica lógica extra
+    refetch()
   }
 
   const printOnlyWorksheet = () => window.print()
@@ -317,7 +315,13 @@ export default function DetailsWorkOrder() {
         {/* Workflow */}
         <Section
           title="Workflow"
-          right={savedOk ? <span className="text-xs text-emerald-400">Saved</span> : <span className="text-xs text-zinc-500">Editable</span>}
+          right={
+            savedOk ? (
+              <span className="text-xs text-emerald-400">Saved</span>
+            ) : (
+              <span className="text-xs text-zinc-500">Editable</span>
+            )
+          }
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -328,7 +332,9 @@ export default function DetailsWorkOrder() {
                 onChange={(e) => setStatus(e.target.value)}
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
               >
-                {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
               </select>
             </div>
             <div>
@@ -339,7 +345,9 @@ export default function DetailsWorkOrder() {
                 onChange={(e) => setPriority(e.target.value)}
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
               >
-                {PRIORITY_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+                {PRIORITY_OPTIONS.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -364,11 +372,11 @@ export default function DetailsWorkOrder() {
                 id="wo-km"
                 type="number"
                 inputMode="numeric"
-                min={0}
                 value={kmAtService}
                 onChange={(e) => setKmAtService(e.target.value)}
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
                 placeholder="e.g. 86500"
+                min={0}
               />
             </div>
             <div className="lg:col-span-2">
@@ -390,7 +398,8 @@ export default function DetailsWorkOrder() {
               <div className="text-xs text-zinc-400">Client</div>
               <div className="text-sm text-zinc-100">
                 {w.client?.company_name ||
-                  [w.client?.first_name, w.client?.last_name].filter(Boolean).join(" ") || "—"}
+                  [w.client?.first_name, w.client?.last_name].filter(Boolean).join(" ") ||
+                  "—"}
               </div>
               <div className="text-xs text-zinc-400">{w.client?.email ?? "—"}</div>
             </div>
@@ -515,6 +524,7 @@ export default function DetailsWorkOrder() {
           {/* List */}
           <ul className="space-y-2">
             {tasks.length === 0 && <li className="text-sm text-zinc-400">No tasks yet.</li>}
+
             {tasks.map((t) => (
               <li key={t.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
                 <div className="flex items-start gap-2">
