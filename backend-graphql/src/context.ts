@@ -3,6 +3,7 @@
 import type { PrismaClient } from "@prisma/client"
 import { db } from "../db"
 import jwt from "jsonwebtoken"
+import { JWT_SECRET } from "./config"
 import { logger } from "./logger"
 
 export type Role = "admin" | "frontdesk" | "mechanic"
@@ -30,7 +31,7 @@ export function createContext({ request }: { request: Request }): Context {
   if (authHeader?.startsWith("Bearer ")) {
     const token = authHeader.slice(7).trim()
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
+      const decoded = jwt.verify(token, JWT_SECRET) as any
 
       if (
         decoded &&
