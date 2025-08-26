@@ -4,11 +4,10 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n backend,control,web -c green,cyan,magenta \"pnpm --filter backend-graphql dev\" \"pnpm --filter control dev\" \"pnpm --filter web dev\"",
+    "dev": "concurrently -n backend,control -c green,cyan \"pnpm --filter backend-graphql dev\" \"pnpm --filter control dev\"",
     "dev:backend": "pnpm --filter backend-graphql dev",
     "dev:control": "pnpm --filter control dev",
-    "dev:web": "pnpm --filter web dev",
-    "build": "pnpm --filter backend-graphql build && pnpm --filter control build && pnpm --filter web build"
+    "build": "pnpm --filter backend-graphql build && pnpm --filter control build"
   },
   "dependencies": {
     "@apollo/client": "^3.13.9",

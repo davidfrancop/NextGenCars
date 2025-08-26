@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
+    "build": "tsc",
     "pull": "prisma db pull",
     "generate": "prisma generate"
   }
