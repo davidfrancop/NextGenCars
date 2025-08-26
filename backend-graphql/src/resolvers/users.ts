@@ -4,6 +4,7 @@ import { Context } from "../context"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { GraphQLError } from "graphql"
+import { JWT_SECRET } from "../config"
 
 const USER_SELECT = {
   user_id: true,
@@ -15,11 +16,11 @@ const USER_SELECT = {
 }
 
 function signToken(user: { user_id: number; email: string; role: string }) {
-  const secret = process.env.JWT_SECRET
-  if (!secret) throw new Error("JWT_SECRET is not set")
   // 👇 defensivo: role en minúsculas (el context igual lo normaliza)
   const role = String(user.role).toLowerCase()
-  return jwt.sign({ sub: user.user_id, email: user.email, role }, secret, { expiresIn: "7d" })
+  return jwt.sign({ sub: user.user_id, email: user.email, role }, JWT_SECRET, {
+    expiresIn: "7d",
+  })
 }
 
 // Helper para serializar fechas a ISO de forma segura
