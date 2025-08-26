@@ -11,8 +11,10 @@ const httpLink = new HttpLink({
 
 const authLink = setContext((_, { headers }) => {
   const token = getToken()
-  // 👇 LOG para verificar qué token se está leyendo
-  console.log("[Apollo authLink] token:", token)
+  // Solo mostrar el token en modo desarrollo para evitar exponerlo en producción
+  if (import.meta.env.DEV) {
+    console.log("[Apollo authLink] token:", token)
+  }
 
   return {
     headers: {
