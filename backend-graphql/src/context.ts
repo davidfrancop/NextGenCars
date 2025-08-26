@@ -3,6 +3,7 @@
 import type { PrismaClient } from "@prisma/client"
 import { db } from "../db"
 import jwt from "jsonwebtoken"
+import { logger } from "./logger"
 
 export type Role = "admin" | "frontdesk" | "mechanic"
 const VALID_ROLES = new Set<Role>(["admin", "frontdesk", "mechanic"])
@@ -52,9 +53,10 @@ export function createContext({ request }: { request: Request }): Context {
     }
   }
 
-  // 👇 LOG: aquí vemos qué llega realmente
-  console.log("[Context] Authorization header:", authHeader)
-  console.log("[Context] user:", user)
+  if (process.env.NODE_ENV !== "production") {
+    logger.debug("[Context] Authorization header:", authHeader)
+    logger.debug("[Context] user:", user)
+  }
 
   return { db, user }
 }
