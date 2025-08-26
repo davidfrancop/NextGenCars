@@ -2,6 +2,7 @@
 
 import { Context } from "../context";
 import { Prisma } from "@prisma/client";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 const toNull = (v?: string | null) => (v && v.trim() ? v.trim() : null);
 const up = (v?: string | null) => (v && v.trim() ? v.trim().toUpperCase() : null);
@@ -105,18 +106,20 @@ export const clientsResolvers = {
           },
         });
         return created;
-      } catch (e: any) {
-        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-          const target = (e.meta?.target as string[])?.[0] ?? "field";
-          throw new Error(
-            target === "email"
-              ? "Email already exists"
-              : target === "dni"
-              ? "DNI already exists"
-              : target === "vat_number"
-              ? "VAT number already exists"
-              : "Unique constraint failed"
-          );
+      } catch (e: unknown) {
+        if (e instanceof PrismaClientKnownRequestError) {
+          if (e.code === "P2002") {
+            const target = (e.meta?.target as string[])?.[0] ?? "field";
+            throw new Error(
+              target === "email"
+                ? "Email already exists"
+                : target === "dni"
+                ? "DNI already exists"
+                : target === "vat_number"
+                ? "VAT number already exists"
+                : "Unique constraint failed"
+            );
+          }
         }
         throw e;
       }
@@ -187,18 +190,20 @@ export const clientsResolvers = {
 
       try {
         return await db.clients.update({ where: { client_id }, data: payload });
-      } catch (e: any) {
-        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-          const target = (e.meta?.target as string[])?.[0] ?? "field";
-          throw new Error(
-            target === "email"
-              ? "Email already exists"
-              : target === "dni"
-              ? "DNI already exists"
-              : target === "vat_number"
-              ? "VAT number already exists"
-              : "Unique constraint failed"
-          );
+      } catch (e: unknown) {
+        if (e instanceof PrismaClientKnownRequestError) {
+          if (e.code === "P2002") {
+            const target = (e.meta?.target as string[])?.[0] ?? "field";
+            throw new Error(
+              target === "email"
+                ? "Email already exists"
+                : target === "dni"
+                ? "DNI already exists"
+                : target === "vat_number"
+                ? "VAT number already exists"
+                : "Unique constraint failed"
+            );
+          }
         }
         throw e;
       }
@@ -208,10 +213,14 @@ export const clientsResolvers = {
       try {
         await db.clients.delete({ where: { client_id: clientId } });
         return true;
-      } catch (e: any) {
-        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2003") {
-          // FK constraint (tiene vehículos/órdenes)
-          throw new Error("Cannot delete client with related records (vehicles/work orders).");
+      } catch (e: unknown) {
+        if (e instanceof PrismaClientKnownRequestError) {
+          if (e.code === "P2003") {
+            // FK constraint (tiene vehículos/órdenes)
+            throw new Error(
+              "Cannot delete client with related records (vehicles/work orders)."
+            );
+          }
         }
         throw e;
       }
