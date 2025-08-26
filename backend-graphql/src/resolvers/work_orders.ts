@@ -3,6 +3,7 @@
 import type { Context } from "../context"
 import { Prisma } from "@prisma/client"
 import { logger } from "../logger"
+import { GraphQLError } from "graphql"
 
 // -------- RBAC: types + guards (tolerantes con user.role: string) --------
 export const ROLES = ["admin", "frontdesk", "mechanic"] as const
@@ -16,12 +17,20 @@ function isRole(x: unknown): x is Role {
 
 /** Asegura auth y estrecha el tipo del role a la unión `Role` */
 function ensureAuth(user?: AuthUserLoose | null): asserts user is (AuthUserLoose & { role: Role }) {
-  if (!user) throw new Error("Unauthorized")
-  if (!isRole(user.role)) throw new Error("Forbidden: unknown role")
+  if (!user) {
+    throw new GraphQLError("Unauthorized", { extensions: { code: "UNAUTHENTICATED" } })
+  }
+  if (!isRole(user.role)) {
+    throw new GraphQLError("Forbidden: unknown role", { extensions: { code: "FORBIDDEN" } })
+  }
 }
 
 function requireAnyRole(user: { role: Role }, roles: Role[]) {
-  if (!roles.includes(user.role)) throw new Error("Forbidden: insufficient permissions")
+  if (!roles.includes(user.role)) {
+    throw new GraphQLError("Forbidden: insufficient permissions", {
+      extensions: { code: "FORBIDDEN" },
+    })
+  }
 }
 
 function canRead(user?: AuthUserLoose | null) {
@@ -90,15 +99,23 @@ const buildWhere = (f?: Filter): Prisma.work_ordersWhereInput | undefined => {
 
 async function assertVehicleBelongsToClient(db: Context["db"], client_id: number, vehicle_id: number) {
   const vehicle = await db.vehicles.findUnique({ where: { vehicle_id } })
-  if (!vehicle) throw new Error("Vehicle not found")
-  if (vehicle.client_id !== client_id) throw new Error("Vehicle does not belong to the specified client")
+  if (!vehicle) {
+    throw new GraphQLError("Vehicle not found", { extensions: { code: "NOT_FOUND" } })
+  }
+  if (vehicle.client_id !== client_id) {
+    throw new GraphQLError("Vehicle does not belong to the specified client", {
+      extensions: { code: "BAD_USER_INPUT" },
+    })
+  }
 }
 
 function preventIllegalCloseTransition(prev: string, next?: string | null) {
   if (!next) return
   const frozen = ["CLOSED", "CANCELED"]
   if (frozen.includes(prev) && !frozen.includes(next)) {
-    throw new Error(`Cannot transition from ${prev} to ${next}`)
+    throw new GraphQLError(`Cannot transition from ${prev} to ${next}`, {
+      extensions: { code: "BAD_USER_INPUT" },
+    })
   }
 }
 
@@ -193,7 +210,9 @@ export const WorkOrdersResolvers = {
       logger.debug("[updateWorkOrder] user:", user, "work_order_id:", work_order_id)
       canMutate(user)
       const existing = await db.work_orders.findUnique({ where: { work_order_id } })
-      if (!existing) throw new Error("Work order not found")
+      if (!existing) {
+        throw new GraphQLError("Work order not found", { extensions: { code: "NOT_FOUND" } })
+      }
 
       preventIllegalCloseTransition(existing.status, input?.status)
 
