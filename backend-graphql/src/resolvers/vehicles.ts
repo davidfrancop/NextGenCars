@@ -1,6 +1,7 @@
 // backend-graphql/src/resolvers/vehicles.ts
 
 import type { Context } from "../context"
+import { GraphQLError } from "graphql"
 
 /* =========================
    Validation utilities
@@ -103,35 +104,38 @@ export const vehicleResolvers = {
 
       // Validate
       if (!isPlateFormatValid(license_plate)) {
-        throw new Error("Invalid license plate format. Use 4–12 alphanumerics with spaces or hyphens.")
+        throw new GraphQLError("Invalid license plate format. Use 4–12 alphanumerics with spaces or hyphens.", { extensions: { code: "BAD_USER_INPUT" } })
       }
       if (!isVINLengthValid(vin)) {
-        throw new Error("Invalid VIN. Must be between 11 and 20 characters (17 typical).")
+        throw new GraphQLError("Invalid VIN. Must be between 11 and 20 characters (17 typical).", { extensions: { code: "BAD_USER_INPUT" } })
       }
       if (!isHSNValid(hsn)) {
-        throw new Error("Invalid HSN. Must be exactly 4 alphanumeric characters.")
+        throw new GraphQLError("Invalid HSN. Must be exactly 4 alphanumeric characters.", { extensions: { code: "BAD_USER_INPUT" } })
       }
       if (!isTSNValid(tsn)) {
-        throw new Error("Invalid TSN. Must be exactly 3 alphanumeric characters.")
+        throw new GraphQLError("Invalid TSN. Must be exactly 3 alphanumeric characters.", { extensions: { code: "BAD_USER_INPUT" } })
       }
       if (!isYearValid(args.year)) {
-        throw new Error("Invalid year. Must be between 1950 and 2100.")
+        throw new GraphQLError("Invalid year. Must be between 1950 and 2100.", { extensions: { code: "BAD_USER_INPUT" } })
       }
       if (!isKmValid(args.km)) {
-        throw new Error("Invalid mileage. Must be a non-negative integer ≤ 2,000,000.")
+        throw new GraphQLError("Invalid mileage. Must be a non-negative integer ≤ 2,000,000.", { extensions: { code: "BAD_USER_INPUT" } })
       }
 
       // FK exists
       const clientExists = await db.clients.findUnique({ where: { client_id: args.client_id } })
-      if (!clientExists) throw new Error("Client not found.")
+      if (!clientExists)
+        throw new GraphQLError("Client not found.", { extensions: { code: "NOT_FOUND" } })
 
       // Uniqueness
       const [plateExists, vinExists] = await Promise.all([
         db.vehicles.findUnique({ where: { license_plate } }),
         db.vehicles.findUnique({ where: { vin } }),
       ])
-      if (plateExists) throw new Error("License plate already exists.")
-      if (vinExists) throw new Error("VIN already exists.")
+      if (plateExists)
+        throw new GraphQLError("License plate already exists.", { extensions: { code: "CONFLICT" } })
+      if (vinExists)
+        throw new GraphQLError("VIN already exists.", { extensions: { code: "CONFLICT" } })
 
       try {
         return await db.vehicles.create({
@@ -156,9 +160,11 @@ export const vehicleResolvers = {
       } catch (err: any) {
         if (err?.code === "P2002") {
           const target = (err.meta?.target as string[])?.join(", ") || "unique field"
-          if (target.includes("vin")) throw new Error("VIN already exists.")
-          if (target.includes("license_plate")) throw new Error("License plate already exists.")
-          throw new Error(`Uniqueness conflict on ${target}.`)
+          if (target.includes("vin"))
+            throw new GraphQLError("VIN already exists.", { extensions: { code: "CONFLICT" } })
+          if (target.includes("license_plate"))
+            throw new GraphQLError("License plate already exists.", { extensions: { code: "CONFLICT" } })
+          throw new GraphQLError(`Uniqueness conflict on ${target}.`, { extensions: { code: "CONFLICT" } })
         }
         throw err
       }
@@ -192,7 +198,8 @@ export const vehicleResolvers = {
       // Optional: verify target client exists if provided
       if (typeof rest.client_id === "number") {
         const client = await db.clients.findUnique({ where: { client_id: rest.client_id } })
-        if (!client) throw new Error("Client not found.")
+        if (!client)
+          throw new GraphQLError("Client not found.", { extensions: { code: "NOT_FOUND" } })
       }
 
       // License plate (supports 'plate' or 'license_plate')
@@ -201,11 +208,11 @@ export const vehicleResolvers = {
       if (typeof incomingPlate === "string") {
         license_plate = normalizePlate(incomingPlate)
         if (!isPlateFormatValid(license_plate)) {
-          throw new Error("Invalid license plate format. Use 4–12 alphanumerics with spaces or hyphens.")
+          throw new GraphQLError("Invalid license plate format. Use 4–12 alphanumerics with spaces or hyphens.", { extensions: { code: "BAD_USER_INPUT" } })
         }
         const conflict = await db.vehicles.findUnique({ where: { license_plate } })
         if (conflict && conflict.vehicle_id !== vehicle_id) {
-          throw new Error("License plate already exists.")
+          throw new GraphQLError("License plate already exists.", { extensions: { code: "CONFLICT" } })
         }
       }
 
@@ -214,11 +221,11 @@ export const vehicleResolvers = {
       if (typeof vin === "string") {
         vin = normalizeVIN(vin)
         if (!isVINLengthValid(vin)) {
-          throw new Error("Invalid VIN. Must be between 11 and 20 characters (17 typical).")
+          throw new GraphQLError("Invalid VIN. Must be between 11 and 20 characters (17 typical).", { extensions: { code: "BAD_USER_INPUT" } })
         }
         const conflictVin = await db.vehicles.findUnique({ where: { vin } })
         if (conflictVin && conflictVin.vehicle_id !== vehicle_id) {
-          throw new Error("VIN already exists.")
+          throw new GraphQLError("VIN already exists.", { extensions: { code: "CONFLICT" } })
         }
       }
 
@@ -227,7 +234,7 @@ export const vehicleResolvers = {
       if (typeof hsn === "string") {
         hsn = hsn.toUpperCase()
         if (!isHSNValid(hsn)) {
-          throw new Error("Invalid HSN. Must be exactly 4 alphanumeric characters.")
+          throw new GraphQLError("Invalid HSN. Must be exactly 4 alphanumeric characters.", { extensions: { code: "BAD_USER_INPUT" } })
         }
       }
 
@@ -236,16 +243,16 @@ export const vehicleResolvers = {
       if (typeof tsn === "string") {
         tsn = tsn.toUpperCase()
         if (!isTSNValid(tsn)) {
-          throw new Error("Invalid TSN. Must be exactly 3 alphanumeric characters.")
+          throw new GraphQLError("Invalid TSN. Must be exactly 3 alphanumeric characters.", { extensions: { code: "BAD_USER_INPUT" } })
         }
       }
 
       // Year and mileage
       if (typeof rest.year === "number" && !isYearValid(rest.year)) {
-        throw new Error("Invalid year. Must be between 1950 and 2100.")
+        throw new GraphQLError("Invalid year. Must be between 1950 and 2100.", { extensions: { code: "BAD_USER_INPUT" } })
       }
       if (typeof rest.km === "number" && !isKmValid(rest.km)) {
-        throw new Error("Invalid mileage. Must be a non-negative integer ≤ 2,000,000.")
+        throw new GraphQLError("Invalid mileage. Must be a non-negative integer ≤ 2,000,000.", { extensions: { code: "BAD_USER_INPUT" } })
       }
 
       // Dates (if provided)
@@ -279,9 +286,11 @@ export const vehicleResolvers = {
       } catch (err: any) {
         if (err?.code === "P2002") {
           const target = (err.meta?.target as string[])?.join(", ") || "unique field"
-          if (target.includes("vin")) throw new Error("VIN already exists.")
-          if (target.includes("license_plate")) throw new Error("License plate already exists.")
-          throw new Error(`Uniqueness conflict on ${target}.`)
+          if (target.includes("vin"))
+            throw new GraphQLError("VIN already exists.", { extensions: { code: "CONFLICT" } })
+          if (target.includes("license_plate"))
+            throw new GraphQLError("License plate already exists.", { extensions: { code: "CONFLICT" } })
+          throw new GraphQLError(`Uniqueness conflict on ${target}.`, { extensions: { code: "CONFLICT" } })
         }
         throw err
       }
