@@ -3,6 +3,7 @@
 import { Context } from "../context";
 import { Prisma } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { GraphQLError } from "graphql";
 
 const toNull = (v?: string | null) => (v && v.trim() ? v.trim() : null);
 const up = (v?: string | null) => (v && v.trim() ? v.trim().toUpperCase() : null);
@@ -109,14 +110,15 @@ export const clientsResolvers = {
       } catch (e: any) {
         if (e instanceof PrismaClientKnownRequestError && e.code === "P2002") {
           const target = (e.meta?.target as string[])?.[0] ?? "field";
-          throw new Error(
+          throw new GraphQLError(
             target === "email"
               ? "Email already exists"
               : target === "dni"
               ? "DNI already exists"
               : target === "vat_number"
               ? "VAT number already exists"
-              : "Unique constraint failed"
+              : "Unique constraint failed",
+            { extensions: { code: "CONFLICT" } }
           );
         }
         throw e;
@@ -149,7 +151,10 @@ export const clientsResolvers = {
       { db }: Context
     ) => {
       const current = await db.clients.findUnique({ where: { client_id } });
-      if (!current) throw new Error("Client not found");
+      if (!current)
+        throw new GraphQLError("Client not found", {
+          extensions: { code: "NOT_FOUND" },
+        });
 
       const nextType = (data.type ?? current.type) as "PERSONAL" | "COMPANY";
 
@@ -191,14 +196,15 @@ export const clientsResolvers = {
       } catch (e: any) {
         if (e instanceof PrismaClientKnownRequestError && e.code === "P2002") {
           const target = (e.meta?.target as string[])?.[0] ?? "field";
-          throw new Error(
+          throw new GraphQLError(
             target === "email"
               ? "Email already exists"
               : target === "dni"
               ? "DNI already exists"
               : target === "vat_number"
               ? "VAT number already exists"
-              : "Unique constraint failed"
+              : "Unique constraint failed",
+            { extensions: { code: "CONFLICT" } }
           );
         }
         throw e;
@@ -212,7 +218,10 @@ export const clientsResolvers = {
       } catch (e: any) {
         if (e instanceof PrismaClientKnownRequestError && e.code === "P2003") {
           // FK constraint (tiene vehículos/órdenes)
-          throw new Error("Cannot delete client with related records (vehicles/work orders).");
+          throw new GraphQLError(
+            "Cannot delete client with related records (vehicles/work orders).",
+            { extensions: { code: "CONFLICT" } }
+          );
         }
         throw e;
       }
