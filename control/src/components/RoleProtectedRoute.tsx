@@ -5,24 +5,37 @@ import Layout from "@/components/Layout"
 import { useAuth } from "@/auth/AuthProvider"
 import { menuItems, type Role } from "@/config/menuItems"
 
-/**
- * Normalizes a pathname to its base route for RBAC matching.
- * e.g. "/users/123/edit" -> "/users"
- */
-function basePath(pathname: string): string {
-  // keep only the first segment ("/" + first)
-  const [ , first ] = pathname.split("/")
-  return first ? `/${first}` : "/"
+/** normaliza quitando query/hash y colapsando // */
+function normalizePath(pathname: string): string {
+  try {
+    const p = pathname.split("?")[0].split("#")[0]
+    return p.replace(/\/{2,}/g, "/").replace(/\/$/, "") || "/"
+  } catch {
+    return "/"
+  }
 }
 
-/**
- * Finds allowed roles for a given pathname using menuItems.
- * If not found, returns [] (deny-by-default).
- */
+/** RBAC: busca roles permitidos para un pathname usando menuItems */
 function allowedRolesFor(pathname: string): Role[] {
-  const base = basePath(pathname)
-  const item = menuItems.find(i => i.path === base)
-  return (item?.roles as Role[]) ?? []
+  const path = normalizePath(pathname)
+
+  // 1) match explícito (soporta dinámicas)
+  const byMatch = menuItems.find(i =>
+    typeof i.match === "function" ? i.match(path)
+    : i.match instanceof RegExp ? i.match.test(path)
+    : false
+  )
+  if (byMatch) return byMatch.roles as Role[]
+
+  // 2) coincidencia exacta
+  const exact = menuItems.find(i => i.path === path)
+  if (exact) return exact.roles as Role[]
+
+  // 3) prefijo más largo ("/users/123/edit" → "/users")
+  const byPrefix = menuItems
+    .filter(i => path.startsWith(i.path))
+    .sort((a, b) => b.path.length - a.path.length)[0]
+  return (byPrefix?.roles as Role[]) ?? []
 }
 
 export default function RoleProtectedRoute() {
@@ -37,16 +50,12 @@ export default function RoleProtectedRoute() {
     return <Navigate to="/login" replace state={{ from: location }} />
   }
 
-  // Normalize role with safe fallback
-  const currentRole = (String(user.role || "").toLowerCase() as Role | "")
   const allowedRoles = allowedRolesFor(location.pathname)
-
-  // Warn if the path isn't mapped (deny-by-default)
   if (allowedRoles.length === 0) {
     console.warn(`[RBAC] Unmapped path (denied by default): ${location.pathname}`)
   }
 
-  // No permission → redirect to /unauthorized
+  const currentRole = (String(user.role || "").toLowerCase() as Role | "")
   if (!allowedRoles.includes(currentRole as Role)) {
     console.warn(
       `[RBAC] Access denied. Current role: "${currentRole || "N/A"}". ` +
@@ -61,7 +70,6 @@ export default function RoleProtectedRoute() {
     )
   }
 
-  // Authorized
   return (
     <Layout>
       <Outlet />
