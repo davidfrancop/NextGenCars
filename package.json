@@ -8,7 +8,8 @@
     "dev:backend": "pnpm --filter backend-graphql dev",
     "dev:control": "pnpm --filter control dev",
     "dev:web": "pnpm --filter web dev",
-    "build": "pnpm --filter backend-graphql build && pnpm --filter web build && pnpm --filter control build"
+    "build": "pnpm --filter backend-graphql build && pnpm --filter web build && pnpm --filter control build",
+    "test": "echo \"No tests specified\""
   },
   "dependencies": {
     "@apollo/client": "^3.13.9",
