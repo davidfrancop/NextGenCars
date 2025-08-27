@@ -1,104 +1,85 @@
-// src/utils/token.ts
-
 const TOKEN_KEY = "nextgencars_token"
 
-// ===== Tipos =====
-export type JWTPayload = {
-  sub?: string
-  email?: string
-  role?: string
-  exp?: number // segundos desde epoch
-  iat?: number
-  [k: string]: unknown
+// Tipos
+export type JWTPayload = { sub?: string; email?: string; role?: string; exp?: number; iat?: number; [k: string]: unknown }
+
+// Safe localStorage
+function safeLocalStorage(): Storage | null {
+  if (typeof window === "undefined") return null
+  try { return window.localStorage } catch { return null }
 }
 
-// ===== Helpers de almacenamiento =====
+// Helpers de almacenamiento
 export function saveToken(token: string) {
-  localStorage.setItem(TOKEN_KEY, token)
+  safeLocalStorage()?.setItem(TOKEN_KEY, token)
 }
-
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY)
+  return safeLocalStorage()?.getItem(TOKEN_KEY) ?? null
 }
-
 export function removeToken() {
-  localStorage.removeItem(TOKEN_KEY)
+  safeLocalStorage()?.removeItem(TOKEN_KEY)
 }
 
-// ===== Base64URL decode seguro =====
+// Base64URL decode seguro
+// @ts-expect-error atob no existe en Node
+declare const atob: (data: string) => string
 function base64UrlDecode(input: string): string {
   try {
     const base64 = input.replace(/-/g, "+").replace(/_/g, "/")
     const padded = base64 + "===".slice((base64.length + 3) % 4)
     return typeof atob === "function"
       ? atob(padded)
-      : Buffer.from(padded, "base64").toString("binary")
+      : Buffer.from(padded, "base64").toString("utf-8")
   } catch {
     return ""
   }
 }
 
-// ===== Parseo/lectura de payload =====
+// Parseo token
 export function parseToken(token: string): JWTPayload | null {
   try {
     const [, payloadB64] = token.split(".")
     if (!payloadB64) return null
-    const json = base64UrlDecode(payloadB64)
-    return JSON.parse(json) as JWTPayload
-  } catch (e) {
-    console.warn("⚠️ Error parsing token:", e)
+    return JSON.parse(base64UrlDecode(payloadB64)) as JWTPayload
+  } catch {
     return null
   }
 }
 
 export function getRoleFromToken(token: string): string | null {
-  const payload = parseToken(token)
-  return payload?.role ? String(payload.role).toLowerCase() : null
+  return parseToken(token)?.role?.toLowerCase() ?? null
 }
-
 export function getCurrentUserRole(): string | null {
-  const token = getToken()
-  return token ? getRoleFromToken(token) : null
+  const t = getToken()
+  return t ? getRoleFromToken(t) : null
 }
-
 export function getUserEmail(): string | null {
-  const token = getToken()
-  const p = token ? parseToken(token) : null
-  return (p?.email as string) ?? null
+  return parseToken(getToken() ?? "")?.email ?? null
 }
-
 export function getUserId(): string | null {
-  const token = getToken()
-  const p = token ? parseToken(token) : null
-  return (p?.sub as string) ?? null
+  return parseToken(getToken() ?? "")?.sub ?? null
 }
 
-// ===== Estado/validación =====
+// Estado
 export function isTokenExpired(token: string): boolean {
   const payload = parseToken(token)
   if (!payload?.exp) return false
-  const nowSec = Math.floor(Date.now() / 1000)
-  return payload.exp <= nowSec
+  return payload.exp <= Math.floor(Date.now() / 1000)
 }
-
 export function isAuthenticated(): boolean {
-  const token = getToken()
-  if (!token) return false
-  return !isTokenExpired(token)
+  const t = getToken()
+  return !!t && !isTokenExpired(t)
 }
-
 export function hasRole(allowed: string[] = []): boolean {
   if (!allowed.length) return isAuthenticated()
-  const token = getToken()
-  if (!token || isTokenExpired(token)) return false
-  const role = getRoleFromToken(token)
-  return role ? allowed.map(r => r.toLowerCase()).includes(role) : false
+  const t = getToken()
+  if (!t || isTokenExpired(t)) return false
+  const role = getRoleFromToken(t)
+  return !!role && allowed.map(r => r.toLowerCase()).includes(role)
 }
-
-// ===== Utilidad opcional para logout forzado =====
 export function ensureAuthOrLogout(): boolean {
-  const token = getToken()
-  if (!token || isTokenExpired(token)) {
+  const t = getToken()
+  if (!t || isTokenExpired(t)) {
     removeToken()
     return false
   }
