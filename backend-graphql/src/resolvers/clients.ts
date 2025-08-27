@@ -1,7 +1,7 @@
 // backend-graphql/src/resolvers/clients.ts
 
 import { Context } from "../context";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { GraphQLError } from "graphql";
 
