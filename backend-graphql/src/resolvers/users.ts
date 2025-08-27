@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { GraphQLError } from "graphql"
 import { JWT_SECRET } from "../config"
+import { normalizeRole } from "../roles"
 
 const USER_SELECT = {
   user_id: true,
@@ -57,7 +58,7 @@ export const userResolvers = {
   Mutation: {
     createUser: async (_: unknown, args: { username: string; email: string; password: string; role: string }, { db }: Context) => {
       const { username, email, password } = args
-      const role = String(args.role).toLowerCase() // 👈 defensivo
+        const role = normalizeRole(args.role)
       const password_hash = await bcrypt.hash(password, 10)
 
       const exists = await db.users.findUnique({ where: { email } })
@@ -80,7 +81,7 @@ export const userResolvers = {
 
     updateUser: async (_: unknown, args: { userId: number; username: string; email: string; role: string; password?: string }, { db }: Context) => {
       const { userId, username, email, password } = args
-      const role = String(args.role).toLowerCase() // 👈 defensivo
+        const role = normalizeRole(args.role)
 
       const existing = await db.users.findUnique({ where: { user_id: userId } })
       if (!existing) {

@@ -1,8 +1,9 @@
 //control/src/auth/useRoleAccess.ts
 
 import { useAuth } from "./AuthProvider"
+import { hasRole } from "./hasRole"
 
 export function useRoleAccess(allowedRoles: string[]) {
   const { user } = useAuth()
-  return allowedRoles.includes(user?.role || "")
+  return hasRole(user?.role, allowedRoles)
 }

@@ -4,16 +4,10 @@ import type { Context } from "../context"
 import { Prisma } from "@prisma/client"
 import { logger } from "../logger"
 import { GraphQLError } from "graphql"
+import { Role, isRole } from "../roles"
 
 // -------- RBAC: types + guards (tolerantes con user.role: string) --------
-export const ROLES = ["admin", "frontdesk", "mechanic"] as const
-export type Role = typeof ROLES[number]
-
 type AuthUserLoose = { role?: string | null } & Record<string, any>
-
-function isRole(x: unknown): x is Role {
-  return typeof x === "string" && (ROLES as readonly string[]).includes(x as Role)
-}
 
 /** Asegura auth y estrecha el tipo del role a la unión `Role` */
 function ensureAuth(user?: AuthUserLoose | null): asserts user is (AuthUserLoose & { role: Role }) {

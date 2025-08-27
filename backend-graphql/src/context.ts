@@ -5,9 +5,7 @@ import { db } from "../db"
 import jwt from "jsonwebtoken"
 import { JWT_SECRET } from "./config"
 import { logger } from "./logger"
-
-export type Role = "admin" | "frontdesk" | "mechanic"
-const VALID_ROLES = new Set<Role>(["admin", "frontdesk", "mechanic"])
+import { Role, isRole } from "./roles"
 
 export interface AuthUser {
   sub: number
@@ -41,13 +39,13 @@ export function createContext({ request }: { request: Request }): Context {
         "role" in decoded
       ) {
         const roleStr = String(decoded.role).toLowerCase()
-        if (VALID_ROLES.has(roleStr as Role)) {
-          user = {
-            sub: Number(decoded.sub),
-            email: String(decoded.email),
-            role: roleStr as Role,
+          if (isRole(roleStr)) {
+            user = {
+              sub: Number(decoded.sub),
+              email: String(decoded.email),
+              role: roleStr,
+            }
           }
-        }
       }
     } catch {
       // token inválido/expirado → user indefinido

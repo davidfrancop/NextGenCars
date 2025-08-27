@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react"
 import { getToken, saveToken, removeToken, parseToken, isTokenExpired } from "@/utils/token"
+import { allRoles } from "@/config/menuItems"
 
 type User = {
   role: string
@@ -32,15 +33,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null)
       return
     }
-    const decoded = parseToken(token)
-    if (decoded?.role) {
-      setIsAuthenticated(true)
-      setUser({
-        ...decoded,
-        role: decoded.role || "",
-        email: decoded.email || "",
-      })
-    }
+      const decoded = parseToken(token)
+      const role = decoded?.role ? String(decoded.role).toLowerCase() : ""
+      if (decoded && allRoles.includes(role as any)) {
+        setIsAuthenticated(true)
+        setUser({
+          ...decoded,
+          role,
+          email: decoded.email || "",
+        })
+      } else {
+        removeToken()
+        setIsAuthenticated(false)
+        setUser(null)
+      }
   }
 
   useEffect(() => {
