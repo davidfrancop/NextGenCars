@@ -52,7 +52,7 @@
 ## **Fase 6 – Work Orders & Appointments**
 
 ### **6.1 – Work Orders backend**
-- [ ] Modelo y relaciones Prisma (WorkOrder ↔ Client ↔ Vehicle)
+- [x] Modelo y relaciones Prisma (WorkOrder ↔ Client ↔ Vehicle)
 - [ ] CRUD backend
 - [ ] Validaciones de negocio
 - [ ] Cálculo de ingresos en aggregate
