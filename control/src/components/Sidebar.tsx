@@ -1,52 +1,124 @@
-// control/src/config/menuItems.ts
+// control/src/components/Sidebar.tsx
 
-import type { ComponentType } from "react"
-import {
-  Home,
-  UserCog,
-  Users,
-  CarFront,
-  Calendar,
-  ClipboardList,
-  ListChecks,
-  Truck,
-  BarChart,
-  FileSignature,
-  Settings,
-} from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { NavLink, useNavigate } from "react-router-dom"
+import { getCurrentUserRole } from "@/utils/token"
+import { menuItems, type Role } from "@/config/menuItems"
+import { LogOut, Menu, X } from "lucide-react"
 
-export type Role = "admin" | "frontdesk" | "mechanic"
-
-export type MenuItem = {
-  label: string
-  path: string
-  roles: Role[]
-  icon?: ComponentType<{ size?: number; className?: string }>
-  /** si es false, no aparece en el sidebar pero mantiene RBAC */
-  showInSidebar?: boolean
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(
+    typeof window !== "undefined" ? window.matchMedia("(min-width: 768px)").matches : true
+  )
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)")
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mq.addEventListener("change", handler)
+    return () => mq.removeEventListener("change", handler)
+  }, [])
+  return isDesktop
 }
 
-export const menuItems: MenuItem[] = [
-  { label: "Dashboard", path: "/dashboard", roles: ["admin", "frontdesk", "mechanic"], icon: Home },
+export default function Sidebar() {
+  const isDesktop = useIsDesktop()
+  const [isOpen, setIsOpen] = useState(isDesktop)
+  useEffect(() => setIsOpen(isDesktop), [isDesktop])
 
-  // Users (solo admin)
-  { label: "Users", path: "/users", roles: ["admin"], icon: Users },
+  const navigate = useNavigate()
+  const role = useMemo(() => (getCurrentUserRole() as Role) ?? "frontdesk", [])
 
-  // Clients y Vehicles (ya creados)
-  { label: "Clients", path: "/clients", roles: ["admin", "frontdesk"], icon: UserCog },
-  { label: "Vehicles", path: "/vehicles", roles: ["admin", "frontdesk", "mechanic"], icon: CarFront },
+  // Oculta los que tengan showInSidebar === false y filtra por rol
+  const filteredMenu = menuItems.filter(
+    (item) => item.roles.includes(role) && item.showInSidebar !== false
+  )
 
-  // ✅ Work Orders (ya creada)
-  { label: "Work Orders", path: "/workorders", roles: ["admin", "frontdesk", "mechanic"], icon: ClipboardList },
+  const handleLogout = () => {
+    localStorage.removeItem("nextgencars_token")
+    navigate("/login")
+  }
 
-  // 🔹 Ocultas hasta que existan sus páginas
-  { label: "Appointments", path: "/appointments", roles: ["admin", "frontdesk"], icon: Calendar, showInSidebar: false },
-  { label: "Inspections", path: "/inspections", roles: ["admin", "mechanic"], icon: ClipboardList, showInSidebar: false },
-  { label: "Templates", path: "/inspections/templates", roles: ["admin"], icon: ListChecks, showInSidebar: false },
-  { label: "Suppliers", path: "/suppliers", roles: ["admin"], icon: Truck, showInSidebar: false },
-  { label: "Reports", path: "/reports", roles: ["admin"], icon: BarChart, showInSidebar: false },
-  { label: "Estimates", path: "/estimates", roles: ["admin", "frontdesk"], icon: FileSignature, showInSidebar: false },
+  return (
+    <>
+      {/* Botón hamburguesa (móvil) */}
+      <button
+        type="button"
+        className="md:hidden fixed top-4 right-4 z-50 inline-flex items-center justify-center rounded p-2 bg-gray-800 border border-gray-700"
+        onClick={() => setIsOpen((v) => !v)}
+        aria-label={isOpen ? "Close menu" : "Open menu"}
+      >
+        {isOpen ? <X size={20} /> : <Menu size={20} />}
+      </button>
 
-  // Settings
-  { label: "Settings", path: "/settings", roles: ["admin"], icon: Settings },
-]
+      {/* Overlay móvil */}
+      <div
+        className={`md:hidden fixed inset-0 z-40 transition-opacity duration-200 ${
+          isOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+        onClick={() => setIsOpen(false)}
+        aria-hidden="true"
+      >
+        <div className="absolute inset-0 bg-black/50" />
+      </div>
+
+      {/* Sidebar */}
+      <aside
+        id="main-sidebar"
+        className={[
+          "bg-gray-900 text-white border-r border-gray-800 flex flex-col",
+          "md:static md:h-screen md:w-64",
+          "fixed top-0 left-0 h-full w-64 z-50 transform transition-transform duration-200 md:transform-none",
+          isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+        ].join(" ")}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 h-16 border-b border-gray-800">
+          <div className="text-lg md:text-xl font-bold">NextGenCars</div>
+          <button
+            type="button"
+            className="md:hidden inline-flex items-center justify-center rounded p-2 bg-gray-800 border border-gray-700"
+            onClick={() => setIsOpen(false)}
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Menú */}
+        <nav className="mt-3 flex-1 overflow-x-hidden overflow-y-auto md:overflow-y-auto">
+          {filteredMenu.map((item) => {
+            const Icon = item.icon
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 mx-2 my-1 px-3 py-2 rounded-lg transition ${
+                    isActive
+                      ? "bg-gray-800 text-white"
+                      : "text-gray-300 hover:bg-gray-800/70"
+                  }`
+                }
+                onClick={() => !isDesktop && setIsOpen(false)}
+              >
+                {Icon && <Icon size={20} />}
+                <span className="truncate">{item.label}</span>
+              </NavLink>
+            )
+          })}
+        </nav>
+
+        {/* Logout */}
+        <div className="px-2 pb-4">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg bg-gray-800/60 hover:bg-red-600/70 transition border border-gray-700 hover:border-red-500"
+          >
+            <LogOut size={20} />
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+    </>
+  )
+}
