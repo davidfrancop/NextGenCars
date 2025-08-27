@@ -33,34 +33,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null)
       return
     }
-      const decoded = parseToken(token)
-      const role = decoded?.role ? String(decoded.role).toLowerCase() : ""
-      if (decoded && allRoles.includes(role as any)) {
-        setIsAuthenticated(true)
-        setUser({
-          ...decoded,
-          role,
-          email: decoded.email || "",
-        })
-      } else {
-        removeToken()
-        setIsAuthenticated(false)
-        setUser(null)
-      }
+    const decoded = parseToken(token)
+    const role = decoded?.role ? String(decoded.role).toLowerCase() : ""
+    if (decoded && allRoles.includes(role as any)) {
+      setIsAuthenticated(true)
+      setUser({
+        ...decoded,
+        role,
+        email: decoded.email || "",
+      })
+    } else {
+      removeToken()
+      setIsAuthenticated(false)
+      setUser(null)
+    }
   }
 
   useEffect(() => {
-    // Chequeo inicial
     applyToken(getToken())
     setLoading(false)
-    // Chequeo periódico
     const interval = setInterval(() => applyToken(getToken()), 60 * 1000)
     return () => clearInterval(interval)
   }, [])
 
   const login = (token: string) => {
-    saveToken(token)           // 👉 guarda en localStorage bajo la clave "token"
-    applyToken(token)          // 👉 actualiza estado
+    saveToken(token)   // ✅ ahora guarda en "nextgencars_token"
+    applyToken(token)
   }
 
   const logout = () => {
