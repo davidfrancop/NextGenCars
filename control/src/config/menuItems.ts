@@ -1,9 +1,18 @@
-// src/config/menuItems.ts
+// control/src/config/menuItems.ts
 
 import type { ComponentType } from "react"
 import {
-  Home, UserCog, Users, CarFront, Calendar, ClipboardList,
-  CheckSquare, ListChecks, Truck, BarChart, FileSignature, Settings,
+  Home,
+  Users,
+  UserCog,
+  Car,        // más compatible que CarFront
+  Calendar,
+  ClipboardList,
+  List,       // más compatible que ListChecks
+  Truck,
+  BarChart,
+  FileText,   // más compatible que FileSignature
+  Settings,
 } from "lucide-react"
 
 export type Role = "admin" | "frontdesk" | "mechanic"
@@ -13,71 +22,77 @@ export type MenuItem = {
   path: string
   roles: Role[]
   icon?: ComponentType<{ size?: number; className?: string }>
+  /** si es false, no aparece en el sidebar pero mantiene RBAC */
   showInSidebar?: boolean
+  /** matcher opcional para rutas dinámicas (/:id, /:id/edit, etc.) */
   match?: RegExp | ((path: string) => boolean)
 }
 
+/** Menú + RBAC (visible y oculto) */
 export const menuItems: MenuItem[] = [
   { label: "Dashboard", path: "/dashboard", roles: ["admin", "frontdesk", "mechanic"], icon: Home },
 
-  // Users: RBAC activo pero oculto del sidebar (vive dentro de Settings)
-  { label: "Users", path: "/users", roles: ["admin"], icon: UserCog, showInSidebar: false },
+  // Users (solo admin) — lo ocultamos del sidebar
+  { label: "Users", path: "/users", roles: ["admin"], icon: Users, showInSidebar: false },
 
-  { label: "Clients", path: "/clients", roles: ["admin", "frontdesk"], icon: Users },
-  { label: "Vehicles", path: "/vehicles", roles: ["admin", "frontdesk", "mechanic"], icon: CarFront },
+  // Clients / Vehicles
+  { label: "Clients", path: "/clients", roles: ["admin", "frontdesk"], icon: UserCog },
+  { label: "Vehicles", path: "/vehicles", roles: ["admin", "frontdesk", "mechanic"], icon: Car },
 
-  // (Opcional) oculto si aún no hay rutas
-  { label: "Appointments", path: "/appointments", roles: ["admin", "frontdesk"], icon: Calendar, showInSidebar: false },
-
-  // Work Orders (entrada principal visible)
+  // Work Orders (visible)
   { label: "Work Orders", path: "/workorders", roles: ["admin", "frontdesk", "mechanic"], icon: ClipboardList },
-
-  // 👇 Entradas ocultas para RBAC fino (no salen en sidebar)
+  // Subrutas de Work Orders (ocultas pero con RBAC)
   { label: "Work Orders · Create", path: "/workorders/create", roles: ["admin", "frontdesk"], showInSidebar: false },
   {
     label: "Work Orders · Edit",
     path: "/workorders",
     roles: ["admin", "frontdesk"],
     showInSidebar: false,
-    match: /^\/workorders\/[^/]+\/edit$/, // admite numérico o UUID
+    match: /^\/workorders\/[^/]+\/edit$/,
   },
   {
     label: "Work Orders · Details",
     path: "/workorders",
     roles: ["admin", "frontdesk", "mechanic"],
     showInSidebar: false,
-    match: /^\/workorders\/[^/]+$/, // /workorders/:id
+    match: /^\/workorders\/[^/]+$/,
   },
 
-  { label: "Inspections", path: "/inspections", roles: ["admin", "frontdesk", "mechanic"], icon: CheckSquare, showInSidebar: false },
-  { label: "Checklist Manager", path: "/inspections/templates", roles: ["admin"], icon: ListChecks, showInSidebar: false },
-
+  // Pendientes: definidos para RBAC pero ocultos del menú hasta crear las páginas
+  { label: "Appointments", path: "/appointments", roles: ["admin", "frontdesk"], icon: Calendar, showInSidebar: false },
+  { label: "Inspections", path: "/inspections", roles: ["admin", "mechanic"], icon: List, showInSidebar: false },
+  { label: "Checklist Manager", path: "/inspections/templates", roles: ["admin"], icon: List, showInSidebar: false },
   { label: "Suppliers", path: "/suppliers", roles: ["admin"], icon: Truck, showInSidebar: false },
   { label: "Reports", path: "/reports", roles: ["admin", "frontdesk"], icon: BarChart, showInSidebar: false },
-  { label: "Estimates", path: "/estimates", roles: ["admin", "frontdesk"], icon: FileSignature, showInSidebar: false },
+  { label: "Estimates", path: "/estimates", roles: ["admin", "frontdesk"], icon: FileText, showInSidebar: false },
 
   { label: "Settings", path: "/settings", roles: ["admin"], icon: Settings },
 ]
 
 export const allRoles: Role[] = ["admin", "frontdesk", "mechanic"]
 
+/** Resuelve roles permitidos para un pathname (incluye dinámicas). */
 export function rolesForPath(pathname: string): Role[] {
-  const byMatch = menuItems.find(i =>
+  // 1) Match explícito para rutas dinámicas
+  const matched = menuItems.find(i =>
     typeof i.match === "function" ? i.match(pathname)
     : i.match instanceof RegExp ? i.match.test(pathname)
     : false
   )
-  if (byMatch) return byMatch.roles
+  if (matched) return matched.roles
 
+  // 2) Coincidencia exacta
   const exact = menuItems.find(i => i.path === pathname)
   if (exact) return exact.roles
 
-  const match = menuItems
-    .filter((i) => pathname.startsWith(i.path))
+  // 3) Prefijo más largo ("/users/123/edit" → "/users")
+  const byPrefix = menuItems
+    .filter(i => pathname.startsWith(i.path))
     .sort((a, b) => b.path.length - a.path.length)[0]
-  if (!match) {
+
+  if (!byPrefix) {
     console.warn(`[RBAC] Path sin mapeo en menuItems: ${pathname} — denegando por defecto`)
     return []
   }
-  return match.roles
+  return byPrefix.roles
 }
